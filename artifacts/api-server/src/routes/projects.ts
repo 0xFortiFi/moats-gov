@@ -148,14 +148,17 @@ router.get("/verified-moats", async (req, res) => {
     const verified = data
       .filter((m) => m.status === "Verified")
       .map((m) => {
-        const tokenName = m.rewardTokens?.[0]?.name ?? null;
+        const tags = (m.tags ?? []).map((t) => ({ name: t.name, color: t.color }));
+        // Use primary tag as display name, fall back to shortened address
+        const primaryTag = tags[0]?.name ?? null;
         const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
+        const name = primaryTag ? `${primaryTag} (${shortAddr})` : shortAddr;
         return {
           contractAddress: m.contractAddress,
-          name: tokenName ?? shortAddr,
+          name,
           network: m.network,
           description: m.rewardStrategy ?? null,
-          tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
+          tags,
         };
       });
     res.json(verified);
