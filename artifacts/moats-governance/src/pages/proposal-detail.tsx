@@ -173,7 +173,12 @@ export default function ProposalDetail() {
                 <div className="text-center p-4 bg-muted/50 rounded-lg border border-border">
                   <AlertCircle className="mx-auto mb-2 text-muted-foreground" size={24} />
                   <p className="text-sm text-muted-foreground mb-4">Connect your wallet to vote on this proposal.</p>
-                  <appkit-button />
+                  <button
+                    onClick={() => { import("@/lib/wallet").then(m => m.appKit.open()); }}
+                    className="px-4 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Connect Wallet
+                  </button>
                 </div>
               ) : proposal.status !== 'active' ? (
                 <div className="text-center p-4 bg-muted/50 rounded-lg border border-border">

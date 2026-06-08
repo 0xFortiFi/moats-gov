@@ -3,6 +3,37 @@ import { appKit } from "@/lib/wallet";
 import { useAccount } from "wagmi";
 import logoUrl from "@assets/IMG_1555_1780933782029.jpg";
 
+function WalletButton() {
+  const { address, isConnected } = useAccount();
+
+  const handleClick = () => {
+    appKit.open();
+  };
+
+  if (isConnected && address) {
+    return (
+      <button
+        onClick={handleClick}
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors"
+      >
+        <span className="h-2 w-2 rounded-full bg-green-400 shrink-0" />
+        <span className="font-mono">
+          {address.slice(0, 6)}…{address.slice(-4)}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="px-4 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+    >
+      Connect Wallet
+    </button>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
@@ -44,7 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-4">
-            <appkit-button />
+            <WalletButton />
           </div>
         </div>
       </header>
