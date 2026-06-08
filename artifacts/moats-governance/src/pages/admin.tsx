@@ -203,21 +203,11 @@ export default function Admin() {
                       <SelectContent className="max-h-72 overflow-y-auto">
                         {verifiedMoats?.map(m => (
                           <SelectItem key={m.contractAddress} value={m.contractAddress}>
-                            <div className="flex items-center gap-2 py-0.5">
-                              <span className="font-mono text-xs text-muted-foreground shrink-0">
+                            <div className="flex flex-col gap-0.5 py-0.5">
+                              <span className="font-medium text-sm">{m.name}</span>
+                              <span className="font-mono text-[11px] text-muted-foreground">
                                 {m.contractAddress.slice(0, 6)}...{m.contractAddress.slice(-4)}
                               </span>
-                              <div className="flex flex-wrap gap-1">
-                                {m.tags.map(t => (
-                                  <span
-                                    key={t.name}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium leading-none"
-                                    style={{ backgroundColor: t.color + "28", color: t.color }}
-                                  >
-                                    {t.name}
-                                  </span>
-                                ))}
-                              </div>
                             </div>
                           </SelectItem>
                         ))}

@@ -145,17 +145,40 @@ router.get("/verified-moats", async (req, res) => {
       tags?: Array<{ name: string; color: string }>;
       rewardTokens?: Array<{ name: string; symbol: string }>;
     }>;
+    // Generic/utility token names that don't represent the moat project
+    const GENERIC_TOKEN_NAMES = new Set([
+      "usd coin", "wrapped avax", "wrapped ether", "wrapped eth",
+      "bitcoin", "ethereum", "tether", "dai"
+    ]);
+
+    const extractMoatName = (m: typeof data[0]): string => {
+      const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
+
+      // 1. First non-generic reward token name
+      const projectToken = (m.rewardTokens ?? []).find(
+        (t) => !GENERIC_TOKEN_NAMES.has(t.name.toLowerCase())
+      );
+      if (projectToken) return projectToken.name;
+
+      // 2. Parse rewardStrategy for a known project name pattern
+      const strategy = m.rewardStrategy ?? "";
+      // Match "X is a ..." or "X is the ..." patterns (capitalized project names)
+      const isAMatch = strategy.match(/^([A-Z][A-Za-z0-9 ]{2,30})\s+is\s+(a|the|an)\s+/);
+      if (isAMatch) return isAMatch[1].trim();
+      // Match "Stake X/Y LP tokens from ... Y" — pick trailing proper noun
+      const stakeMatch = strategy.match(/\b([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+){0,3})\.\s*$/);
+      if (stakeMatch) return stakeMatch[1].trim();
+
+      return shortAddr;
+    };
+
     const verified = data
       .filter((m) => m.status === "Verified")
       .map((m) => {
         const tags = (m.tags ?? []).map((t) => ({ name: t.name, color: t.color }));
-        // Use primary tag as display name, fall back to shortened address
-        const primaryTag = tags[0]?.name ?? null;
-        const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
-        const name = primaryTag ? `${primaryTag} (${shortAddr})` : shortAddr;
         return {
           contractAddress: m.contractAddress,
-          name,
+          name: extractMoatName(m),
           network: m.network,
           description: m.rewardStrategy ?? null,
           tags,
