@@ -10,6 +10,27 @@ const MOAT_API = "https://moat-api.fortifi.network/api";
 
 router.get("/projects", async (req, res) => {
   try {
+    // Auto-sync verified moats into the projects table so every moat appears as a project.
+    // Uses the same in-memory cache as /verified-moats, so no extra RPC cost on cache hits.
+    try {
+      const moats = await getVerifiedMoats();
+      if (moats.length > 0) {
+        await db
+          .insert(projectsTable)
+          .values(
+            moats.map((m) => ({
+              name: m.name,
+              contractAddress: m.contractAddress,
+              description: m.description ?? null,
+            }))
+          )
+          .onConflictDoNothing();
+      }
+    } catch (syncErr) {
+      // Non-fatal — still return whatever is in the DB
+      req.log.warn({ err: syncErr }, "Could not sync verified moats");
+    }
+
     const projects = await db.select().from(projectsTable).orderBy(projectsTable.createdAt);
     res.json(
       projects.map((p) => ({
@@ -171,46 +192,54 @@ async function resolveMoatName(moatAddr: string): Promise<string | null> {
   }
 }
 
+type VerifiedMoat = {
+  contractAddress: string;
+  name: string;
+  network: string;
+  description: string | null;
+  tags: Array<{ name: string; color: string }>;
+};
+
 // 10-minute in-memory cache
-let verifiedMoatsCache: { data: unknown[]; expiresAt: number } | null = null;
+let verifiedMoatsCache: { data: VerifiedMoat[]; expiresAt: number } | null = null;
+
+async function getVerifiedMoats(): Promise<VerifiedMoat[]> {
+  if (verifiedMoatsCache && Date.now() < verifiedMoatsCache.expiresAt) {
+    return verifiedMoatsCache.data;
+  }
+
+  const response = await fetch(`${MOAT_API}/moat-config`);
+  if (!response.ok) throw new Error("Failed to reach Moats API");
+
+  const data = (await response.json()) as Array<{
+    contractAddress: string;
+    network: string;
+    status: string;
+    rewardStrategy?: string;
+    tags?: Array<{ name: string; color: string }>;
+  }>;
+
+  const verified = data.filter((m) => m.status === "Verified");
+  const names = await Promise.all(verified.map((m) => resolveMoatName(m.contractAddress)));
+
+  const result: VerifiedMoat[] = verified.map((m, i) => {
+    const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
+    return {
+      contractAddress: m.contractAddress,
+      name: names[i] ?? `Moat ${shortAddr}`,
+      network: m.network,
+      description: m.rewardStrategy ?? null,
+      tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
+    };
+  });
+
+  verifiedMoatsCache = { data: result, expiresAt: Date.now() + 10 * 60 * 1000 };
+  return result;
+}
 
 router.get("/verified-moats", async (req, res) => {
   try {
-    if (verifiedMoatsCache && Date.now() < verifiedMoatsCache.expiresAt) {
-      res.json(verifiedMoatsCache.data);
-      return;
-    }
-
-    const response = await fetch(`${MOAT_API}/moat-config`);
-    if (!response.ok) {
-      res.status(502).json({ error: "Failed to reach Moats API" });
-      return;
-    }
-    const data = (await response.json()) as Array<{
-      contractAddress: string;
-      network: string;
-      status: string;
-      rewardStrategy?: string;
-      tags?: Array<{ name: string; color: string }>;
-    }>;
-
-    const verified = data.filter((m) => m.status === "Verified");
-
-    // Resolve all moat names on-chain in parallel
-    const names = await Promise.all(verified.map((m) => resolveMoatName(m.contractAddress)));
-
-    const result = verified.map((m, i) => {
-      const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
-      return {
-        contractAddress: m.contractAddress,
-        name: names[i] ?? `Moat ${shortAddr}`,
-        network: m.network,
-        description: m.rewardStrategy ?? null,
-        tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
-      };
-    });
-
-    verifiedMoatsCache = { data: result, expiresAt: Date.now() + 10 * 60 * 1000 };
+    const result = await getVerifiedMoats();
     res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch verified moats");
