@@ -1,14 +1,15 @@
 import React from "react";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  useListProjects, 
-  useListAdmins, 
-  useCreateProposal, 
-  useCreateProject, 
+import {
+  useListProjects,
+  useListAdmins,
+  useCreateProposal,
+  useCreateProject,
   useAddAdmin,
   useRemoveAdmin,
-  ProposalInputQuorumType
+  QuorumType,
+  VotingMethod,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,12 +17,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type VerifiedMoat = {
@@ -32,13 +32,139 @@ type VerifiedMoat = {
   tags: Array<{ name: string; color: string }>;
 };
 
+// ── Quorum type metadata ───────────────────────────────────────────────────────
+const QUORUM_TYPES: Array<{
+  value: QuorumType;
+  label: string;
+  description: string;
+  group: string;
+  thresholdLabel: string;
+  hasApprovalThreshold: boolean;
+  thresholdUnit: "%" | "tokens";
+}> = [
+  {
+    value: "participation",
+    label: "Participation",
+    description: "All votes count toward quorum: FOR + AGAINST + ABSTAIN",
+    group: "Participation-Based",
+    thresholdLabel: "Min. Participation",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "approval",
+    label: "Approval Only",
+    description: "Only FOR votes count — a minimum level of active support is required",
+    group: "Participation-Based",
+    thresholdLabel: "Min. FOR Votes",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "for_abstain",
+    label: "For + Abstain",
+    description: "FOR and ABSTAIN votes count — neutral participation is recognised",
+    group: "Participation-Based",
+    thresholdLabel: "Min. FOR + ABSTAIN",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "percentage",
+    label: "Percentage-Based",
+    description: "A % of total eligible voting power must participate",
+    group: "Threshold-Based",
+    thresholdLabel: "Participation %",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "fixed_token",
+    label: "Fixed Token",
+    description: "A fixed amount of voting power (tokens) must participate",
+    group: "Threshold-Based",
+    thresholdLabel: "Min. Voting Power (tokens)",
+    hasApprovalThreshold: false,
+    thresholdUnit: "tokens",
+  },
+  {
+    value: "dual",
+    label: "Dual Quorum",
+    description: "Requires both a participation minimum AND a minimum approval percentage",
+    group: "Threshold-Based",
+    thresholdLabel: "Participation %",
+    hasApprovalThreshold: true,
+    thresholdUnit: "%",
+  },
+  {
+    value: "veto",
+    label: "Veto",
+    description: "Proposal passes by default unless opposition reaches the threshold",
+    group: "Threshold-Based",
+    thresholdLabel: "Veto Threshold",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "dynamic",
+    label: "Dynamic",
+    description: "Quorum adjusts automatically based on average historical participation × multiplier",
+    group: "Adaptive",
+    thresholdLabel: "Multiplier %",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "time_weighted",
+    label: "Time-Weighted",
+    description: "Quorum requirement changes over the voting period (starts high, decreases)",
+    group: "Adaptive",
+    thresholdLabel: "Initial Quorum %",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "tiered",
+    label: "Tiered",
+    description: "Different proposal types require different quorum levels (set the base %)",
+    group: "Adaptive",
+    thresholdLabel: "Base Quorum %",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+  {
+    value: "security",
+    label: "Security / Constitutional",
+    description: "Elevated requirements for critical or protocol-level changes",
+    group: "Adaptive",
+    thresholdLabel: "Min. Participation",
+    hasApprovalThreshold: false,
+    thresholdUnit: "%",
+  },
+];
+
+const VOTING_METHODS: Array<{
+  value: VotingMethod;
+  label: string;
+  description: string;
+}> = [
+  { value: "basic", label: "Basic (FOR / AGAINST / ABSTAIN)", description: "Standard three-choice vote" },
+  { value: "single_choice", label: "Single Choice", description: "Voters pick exactly one option" },
+  { value: "approval_voting", label: "Approval Voting", description: "Voters may select multiple valid options" },
+  { value: "ranked_choice", label: "Ranked Choice", description: "Voters rank options by preference" },
+  { value: "weighted", label: "Weighted Voting", description: "Voters distribute their voting power across options" },
+  { value: "quadratic", label: "Quadratic Voting", description: "Voting cost increases quadratically, reducing whale dominance" },
+];
+
+const QUORUM_GROUPS = ["Participation-Based", "Threshold-Based", "Adaptive"];
+
 export default function Admin() {
   const { address } = useAccount();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading: isLoadingProjects } = useListProjects();
-  const { data: admins, isLoading: isLoadingAdmins } = useListAdmins({});
+  const { data: admins } = useListAdmins({});
 
   const { data: verifiedMoats, isLoading: isLoadingMoats } = useQuery<VerifiedMoat[]>({
     queryKey: ["verified-moats"],
@@ -55,29 +181,32 @@ export default function Admin() {
   const addAdmin = useAddAdmin();
   const removeAdmin = useRemoveAdmin();
 
+  // Proposal form state
+  const [propMoatAddr, setPropMoatAddr] = React.useState("");
   const [propTitle, setPropTitle] = React.useState("");
   const [propDesc, setPropDesc] = React.useState("");
-  const [propMoatAddr, setPropMoatAddr] = React.useState("");
-  const [propQuorum, setPropQuorum] = React.useState<ProposalInputQuorumType>("simple_majority");
-  const [propThreshold, setPropThreshold] = React.useState("51");
+  const [propQuorum, setPropQuorum] = React.useState<QuorumType>("participation");
+  const [propThreshold, setPropThreshold] = React.useState("10");
+  const [propApprovalThreshold, setPropApprovalThreshold] = React.useState("51");
+  const [propVotingMethod, setPropVotingMethod] = React.useState<VotingMethod>("basic");
   const [propStart, setPropStart] = React.useState("");
   const [propEnd, setPropEnd] = React.useState("");
   const [isSubmittingProposal, setIsSubmittingProposal] = React.useState(false);
 
   const selectedMoat = verifiedMoats?.find(m => m.contractAddress === propMoatAddr);
+  const selectedQuorumMeta = QUORUM_TYPES.find(q => q.value === propQuorum)!;
+  const selectedVotingMeta = VOTING_METHODS.find(v => v.value === propVotingMethod)!;
 
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!propMoatAddr || !selectedMoat) return;
     setIsSubmittingProposal(true);
     try {
-      // Find or register the moat as a local project
       const existingProject = projects?.find(p => p.contractAddress.toLowerCase() === propMoatAddr.toLowerCase());
       let projectId: number;
       if (existingProject) {
         projectId = existingProject.id;
       } else {
-        // Auto-register the verified moat as a project
         const res = await fetch("/api/projects", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -101,6 +230,8 @@ export default function Admin() {
           projectId,
           quorumType: propQuorum,
           quorumThreshold: parseFloat(propThreshold),
+          approvalThreshold: selectedQuorumMeta.hasApprovalThreshold ? parseFloat(propApprovalThreshold) : undefined,
+          votingMethod: propVotingMethod,
           startDate: new Date(propStart).toISOString(),
           endDate: new Date(propEnd).toISOString(),
           createdBy: address ?? "0x0000000000000000000000000000000000000000",
@@ -109,7 +240,8 @@ export default function Admin() {
         onSuccess: () => {
           toast({ title: "Proposal created successfully" });
           setPropTitle(""); setPropDesc(""); setPropMoatAddr("");
-          setPropThreshold("51"); setPropStart(""); setPropEnd("");
+          setPropThreshold("10"); setPropApprovalThreshold("51");
+          setPropStart(""); setPropEnd("");
           queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
           setIsSubmittingProposal(false);
         },
@@ -124,6 +256,7 @@ export default function Admin() {
     }
   };
 
+  // Project form state
   const [projName, setProjName] = React.useState("");
   const [projContract, setProjContract] = React.useState("");
   const [projDesc, setProjDesc] = React.useState("");
@@ -132,12 +265,7 @@ export default function Admin() {
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     createProject.mutate({
-      data: {
-        name: projName,
-        contractAddress: projContract,
-        description: projDesc,
-        logoUrl: projLogo
-      }
+      data: { name: projName, contractAddress: projContract, description: projDesc, logoUrl: projLogo }
     }, {
       onSuccess: () => {
         toast({ title: "Project registered successfully" });
@@ -148,16 +276,14 @@ export default function Admin() {
     });
   };
 
+  // Admin form state
   const [adminWallet, setAdminWallet] = React.useState("");
   const [adminProjectId, setAdminProjectId] = React.useState("");
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     addAdmin.mutate({
-      data: {
-        walletAddress: adminWallet,
-        projectId: parseInt(adminProjectId, 10)
-      }
+      data: { walletAddress: adminWallet, projectId: parseInt(adminProjectId, 10) }
     }, {
       onSuccess: () => {
         toast({ title: "Admin added successfully" });
@@ -167,7 +293,6 @@ export default function Admin() {
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" })
     });
   };
-
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in duration-500 max-w-5xl mx-auto">
@@ -183,14 +308,17 @@ export default function Admin() {
           <TabsTrigger value="admins" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Manage Admins</TabsTrigger>
         </TabsList>
 
+        {/* ── Create Proposal ─────────────────────────────────────────────── */}
         <TabsContent value="proposals">
           <Card className="bg-card">
             <CardHeader>
               <CardTitle>Launch New Proposal</CardTitle>
-              <CardDescription>Create a new governance proposal for an existing project.</CardDescription>
+              <CardDescription>Create a governance proposal with configurable quorum and voting rules.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleCreateProposal} className="space-y-6">
+              <form onSubmit={handleCreateProposal} className="space-y-8">
+
+                {/* Moat selector */}
                 <div className="space-y-2">
                   <Label>Verified Moat</Label>
                   {isLoadingMoats ? (
@@ -230,38 +358,112 @@ export default function Admin() {
                     </div>
                   )}
                 </div>
-                
+
+                {/* Title & description */}
                 <div className="space-y-2">
                   <Label>Proposal Title</Label>
                   <Input value={propTitle} onChange={(e) => setPropTitle(e.target.value)} placeholder="Enter proposal title" required className="bg-background" />
                 </div>
-
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea value={propDesc} onChange={(e) => setPropDesc(e.target.value)} placeholder="Detailed description of the proposal" required className="bg-background min-h-[150px]" />
+                  <Textarea value={propDesc} onChange={(e) => setPropDesc(e.target.value)} placeholder="Detailed description of the proposal" required className="bg-background min-h-[130px]" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* ── Voting Configuration ─────────────────────────────────── */}
+                <div className="rounded-lg border border-border/60 p-5 space-y-6 bg-background/40">
+                  <p className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Voting Configuration</p>
+
+                  {/* Voting Method */}
                   <div className="space-y-2">
-                    <Label>Quorum Type</Label>
-                    <Select value={propQuorum} onValueChange={(v) => setPropQuorum(v as any)} required>
+                    <Label>Voting Method</Label>
+                    <Select value={propVotingMethod} onValueChange={(v) => setPropVotingMethod(v as VotingMethod)}>
                       <SelectTrigger className="bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="simple_majority">Simple Majority</SelectItem>
-                        <SelectItem value="supermajority">Supermajority</SelectItem>
-                        <SelectItem value="token_weighted">Token Weighted</SelectItem>
-                        <SelectItem value="unanimous">Unanimous</SelectItem>
+                        {VOTING_METHODS.map(m => (
+                          <SelectItem key={m.value} value={m.value}>
+                            <span className="font-medium">{m.label}</span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {selectedVotingMeta && (
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground pt-0.5">
+                        <Info size={12} className="mt-0.5 shrink-0" />
+                        {selectedVotingMeta.description}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Quorum Type */}
                   <div className="space-y-2">
-                    <Label>Quorum Threshold (%)</Label>
-                    <Input type="number" min="1" max="100" value={propThreshold} onChange={(e) => setPropThreshold(e.target.value)} required className="bg-background" />
+                    <Label>Quorum Type</Label>
+                    <Select value={propQuorum} onValueChange={(v) => setPropQuorum(v as QuorumType)}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-80 overflow-y-auto">
+                        {QUORUM_GROUPS.map(group => (
+                          <SelectGroup key={group}>
+                            <SelectLabel className="text-[11px] text-muted-foreground/70 uppercase tracking-wide">{group}</SelectLabel>
+                            {QUORUM_TYPES.filter(q => q.group === group).map(q => (
+                              <SelectItem key={q.value} value={q.value}>
+                                <span className="font-medium">{q.label}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedQuorumMeta && (
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground pt-0.5">
+                        <Info size={12} className="mt-0.5 shrink-0" />
+                        {selectedQuorumMeta.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Threshold fields — context-aware */}
+                  <div className={`grid gap-4 ${selectedQuorumMeta?.hasApprovalThreshold ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+                    <div className="space-y-2">
+                      <Label>
+                        {selectedQuorumMeta?.thresholdLabel ?? "Quorum Threshold"}
+                        {selectedQuorumMeta?.thresholdUnit === "%" ? " (%)" : " (tokens)"}
+                      </Label>
+                      <Input
+                        type="number"
+                        min={selectedQuorumMeta?.thresholdUnit === "tokens" ? "1" : "1"}
+                        max={selectedQuorumMeta?.thresholdUnit === "%" ? "100" : undefined}
+                        step={selectedQuorumMeta?.thresholdUnit === "tokens" ? "1" : "0.1"}
+                        value={propThreshold}
+                        onChange={(e) => setPropThreshold(e.target.value)}
+                        required
+                        className="bg-background"
+                      />
+                    </div>
+
+                    {selectedQuorumMeta?.hasApprovalThreshold ? (
+                      <div className="space-y-2">
+                        <Label>Approval Threshold (%)</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="0.1"
+                          value={propApprovalThreshold}
+                          onChange={(e) => setPropApprovalThreshold(e.target.value)}
+                          required
+                          className="bg-background"
+                        />
+                      </div>
+                    ) : (
+                      <div /> /* keep grid balanced */
+                    )}
                   </div>
                 </div>
 
+                {/* Dates */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>Start Date</Label>
@@ -273,14 +475,15 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={createProposal.isPending} className="w-full sm:w-auto">
-                  {createProposal.isPending ? "Submitting..." : "Submit Proposal"}
+                <Button type="submit" disabled={isSubmittingProposal || createProposal.isPending} className="w-full sm:w-auto">
+                  {isSubmittingProposal || createProposal.isPending ? "Submitting..." : "Submit Proposal"}
                 </Button>
               </form>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ── Manage Projects ──────────────────────────────────────────────── */}
         <TabsContent value="projects">
           <Card className="bg-card">
             <CardHeader>
@@ -313,6 +516,7 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
+        {/* ── Manage Admins ────────────────────────────────────────────────── */}
         <TabsContent value="admins">
           <div className="space-y-8">
             <Card className="bg-card">
@@ -367,9 +571,9 @@ export default function Admin() {
                         </TableCell>
                         <TableCell className="font-mono text-sm">{admin.walletAddress}</TableCell>
                         <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
                             onClick={() => {
                               if (confirm("Remove this admin?")) {

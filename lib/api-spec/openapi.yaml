@@ -371,9 +371,34 @@ components:
         logoUrl:
           type: string
 
+    QuorumType:
+      type: string
+      enum:
+        - fixed_token
+        - percentage
+        - dynamic
+        - participation
+        - approval
+        - for_abstain
+        - dual
+        - veto
+        - tiered
+        - time_weighted
+        - security
+
+    VotingMethod:
+      type: string
+      enum:
+        - basic
+        - single_choice
+        - approval_voting
+        - ranked_choice
+        - weighted
+        - quadratic
+
     Proposal:
       type: object
-      required: [id, title, projectId, projectName, status, createdBy, quorumType, quorumThreshold, startDate, endDate, createdAt]
+      required: [id, title, projectId, projectName, status, createdBy, quorumType, quorumThreshold, votingMethod, startDate, endDate, createdAt]
       properties:
         id:
           type: integer
@@ -391,10 +416,13 @@ components:
         createdBy:
           type: string
         quorumType:
-          type: string
-          enum: [simple_majority, supermajority, token_weighted, unanimous]
+          $ref: "#/components/schemas/QuorumType"
         quorumThreshold:
           type: number
+        approvalThreshold:
+          type: ["number", "null"]
+        votingMethod:
+          $ref: "#/components/schemas/VotingMethod"
         startDate:
           type: string
         endDate:
@@ -412,7 +440,7 @@ components:
 
     ProposalDetail:
       type: object
-      required: [id, title, projectId, projectName, status, createdBy, quorumType, quorumThreshold, startDate, endDate, createdAt, votes]
+      required: [id, title, projectId, projectName, status, createdBy, quorumType, quorumThreshold, votingMethod, startDate, endDate, createdAt, votes]
       properties:
         id:
           type: integer
@@ -432,10 +460,13 @@ components:
         createdBy:
           type: string
         quorumType:
-          type: string
-          enum: [simple_majority, supermajority, token_weighted, unanimous]
+          $ref: "#/components/schemas/QuorumType"
         quorumThreshold:
           type: number
+        approvalThreshold:
+          type: ["number", "null"]
+        votingMethod:
+          $ref: "#/components/schemas/VotingMethod"
         startDate:
           type: string
         endDate:
@@ -457,7 +488,7 @@ components:
 
     ProposalInput:
       type: object
-      required: [title, projectId, quorumType, quorumThreshold, startDate, endDate, createdBy]
+      required: [title, projectId, quorumType, quorumThreshold, votingMethod, startDate, endDate, createdBy]
       properties:
         title:
           type: string
@@ -466,10 +497,13 @@ components:
         projectId:
           type: integer
         quorumType:
-          type: string
-          enum: [simple_majority, supermajority, token_weighted, unanimous]
+          $ref: "#/components/schemas/QuorumType"
         quorumThreshold:
           type: number
+        approvalThreshold:
+          type: number
+        votingMethod:
+          $ref: "#/components/schemas/VotingMethod"
         startDate:
           type: string
         endDate:

@@ -29,6 +29,35 @@ export interface ProjectInput {
   logoUrl?: string;
 }
 
+export type QuorumType = typeof QuorumType[keyof typeof QuorumType];
+
+
+export const QuorumType = {
+  fixed_token: 'fixed_token',
+  percentage: 'percentage',
+  dynamic: 'dynamic',
+  participation: 'participation',
+  approval: 'approval',
+  for_abstain: 'for_abstain',
+  dual: 'dual',
+  veto: 'veto',
+  tiered: 'tiered',
+  time_weighted: 'time_weighted',
+  security: 'security',
+} as const;
+
+export type VotingMethod = typeof VotingMethod[keyof typeof VotingMethod];
+
+
+export const VotingMethod = {
+  basic: 'basic',
+  single_choice: 'single_choice',
+  approval_voting: 'approval_voting',
+  ranked_choice: 'ranked_choice',
+  weighted: 'weighted',
+  quadratic: 'quadratic',
+} as const;
+
 export type ProposalStatus = typeof ProposalStatus[keyof typeof ProposalStatus];
 
 
@@ -40,16 +69,6 @@ export const ProposalStatus = {
   cancelled: 'cancelled',
 } as const;
 
-export type ProposalQuorumType = typeof ProposalQuorumType[keyof typeof ProposalQuorumType];
-
-
-export const ProposalQuorumType = {
-  simple_majority: 'simple_majority',
-  supermajority: 'supermajority',
-  token_weighted: 'token_weighted',
-  unanimous: 'unanimous',
-} as const;
-
 export interface Proposal {
   id: number;
   title: string;
@@ -59,8 +78,11 @@ export interface Proposal {
   projectName: string;
   status: ProposalStatus;
   createdBy: string;
-  quorumType: ProposalQuorumType;
+  quorumType: QuorumType;
   quorumThreshold: number;
+  /** @nullable */
+  approvalThreshold?: number | null;
+  votingMethod: VotingMethod;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -79,16 +101,6 @@ export const ProposalDetailStatus = {
   failed: 'failed',
   pending: 'pending',
   cancelled: 'cancelled',
-} as const;
-
-export type ProposalDetailQuorumType = typeof ProposalDetailQuorumType[keyof typeof ProposalDetailQuorumType];
-
-
-export const ProposalDetailQuorumType = {
-  simple_majority: 'simple_majority',
-  supermajority: 'supermajority',
-  token_weighted: 'token_weighted',
-  unanimous: 'unanimous',
 } as const;
 
 export type VoteChoice = typeof VoteChoice[keyof typeof VoteChoice];
@@ -120,8 +132,11 @@ export interface ProposalDetail {
   contractAddress?: string;
   status: ProposalDetailStatus;
   createdBy: string;
-  quorumType: ProposalDetailQuorumType;
+  quorumType: QuorumType;
   quorumThreshold: number;
+  /** @nullable */
+  approvalThreshold?: number | null;
+  votingMethod: VotingMethod;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -132,22 +147,14 @@ export interface ProposalDetail {
   votes: Vote[];
 }
 
-export type ProposalInputQuorumType = typeof ProposalInputQuorumType[keyof typeof ProposalInputQuorumType];
-
-
-export const ProposalInputQuorumType = {
-  simple_majority: 'simple_majority',
-  supermajority: 'supermajority',
-  token_weighted: 'token_weighted',
-  unanimous: 'unanimous',
-} as const;
-
 export interface ProposalInput {
   title: string;
   description?: string;
   projectId: number;
-  quorumType: ProposalInputQuorumType;
+  quorumType: QuorumType;
   quorumThreshold: number;
+  approvalThreshold?: number;
+  votingMethod: VotingMethod;
   startDate: string;
   endDate: string;
   createdBy: string;

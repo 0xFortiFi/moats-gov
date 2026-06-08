@@ -5,9 +5,10 @@
  * Moats App Governance API
  * OpenAPI spec version: 0.1.0
  */
-import type { ProposalDetailQuorumType } from './proposalDetailQuorumType';
 import type { ProposalDetailStatus } from './proposalDetailStatus';
+import type { QuorumType } from './quorumType';
 import type { Vote } from './vote';
+import type { VotingMethod } from './votingMethod';
 
 export interface ProposalDetail {
   id: number;
@@ -19,8 +20,11 @@ export interface ProposalDetail {
   contractAddress?: string;
   status: ProposalDetailStatus;
   createdBy: string;
-  quorumType: ProposalDetailQuorumType;
+  quorumType: QuorumType;
   quorumThreshold: number;
+  /** @nullable */
+  approvalThreshold?: number | null;
+  votingMethod: VotingMethod;
   startDate: string;
   endDate: string;
   createdAt: string;
