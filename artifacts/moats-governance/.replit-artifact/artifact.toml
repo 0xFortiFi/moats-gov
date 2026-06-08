@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Moats App Governance"
+version = "1.0.0"
+id = "artifacts/moats-governance"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18209
+
+[services.development]
+run = "pnpm --filter @workspace/moats-governance run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/moats-governance", "run", "build" ]
+publicDir = "artifacts/moats-governance/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18209"
+BASE_PATH = "/"

@@ -3,20 +3,28 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Moats App Governance API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: proposals
+    description: Governance proposals
+  - name: votes
+    description: Voting on proposals
+  - name: admins
+    description: Admin management
+  - name: projects
+    description: Project management
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,301 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /proposals:
+    get:
+      operationId: listProposals
+      tags: [proposals]
+      summary: List all proposals
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: [active, passed, failed, pending, cancelled, null]
+      responses:
+        "200":
+          description: List of proposals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Proposal"
+    post:
+      operationId: createProposal
+      tags: [proposals]
+      summary: Create a new proposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProposalInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "403":
+          description: Forbidden
+
+  /proposals/summary:
+    get:
+      operationId: getProposalsSummary
+      tags: [proposals]
+      summary: Get proposal statistics summary
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalSummary"
+
+  /proposals/{id}:
+    get:
+      operationId: getProposal
+      tags: [proposals]
+      summary: Get a proposal by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProposal
+      tags: [proposals]
+      summary: Update proposal status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProposalUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "403":
+          description: Forbidden
+    delete:
+      operationId: deleteProposal
+      tags: [proposals]
+      summary: Delete / cancel a proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+
+  /proposals/{id}/votes:
+    get:
+      operationId: listVotes
+      tags: [votes]
+      summary: Get all votes for a proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of votes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vote"
+    post:
+      operationId: castVote
+      tags: [votes]
+      summary: Cast a vote on a proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteInput"
+      responses:
+        "201":
+          description: Vote recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vote"
+        "400":
+          description: Already voted or invalid
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all governance projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Register a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}/leaderboard:
+    get:
+      operationId: getProjectLeaderboard
+      tags: [projects]
+      summary: Get Moat Points leaderboard for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /admins:
+    get:
+      operationId: listAdmins
+      tags: [admins]
+      summary: List admins for a project
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of admins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Admin"
+    post:
+      operationId: addAdmin
+      tags: [admins]
+      summary: Add an admin to a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+
+  /admins/{id}:
+    delete:
+      operationId: removeAdmin
+      tags: [admins]
+      summary: Remove an admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +337,233 @@ components:
       required:
         - status
 
+    Project:
+      type: object
+      required: [id, name, contractAddress, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contractAddress:
+          type: string
+        description:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        totalProposals:
+          type: integer
+        activeProposals:
+          type: integer
+        createdAt:
+          type: string
+
+    ProjectInput:
+      type: object
+      required: [name, contractAddress]
+      properties:
+        name:
+          type: string
+        contractAddress:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+
+    Proposal:
+      type: object
+      required: [id, title, projectId, projectName, status, createdBy, quorumType, quorumThreshold, startDate, endDate, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        status:
+          type: string
+          enum: [active, passed, failed, pending, cancelled]
+        createdBy:
+          type: string
+        quorumType:
+          type: string
+          enum: [simple_majority, supermajority, token_weighted, unanimous]
+        quorumThreshold:
+          type: number
+        startDate:
+          type: string
+        endDate:
+          type: string
+        createdAt:
+          type: string
+        votesFor:
+          type: integer
+        votesAgainst:
+          type: integer
+        votesAbstain:
+          type: integer
+        totalVotes:
+          type: integer
+
+    ProposalDetail:
+      type: object
+      required: [id, title, projectId, projectName, status, createdBy, quorumType, quorumThreshold, startDate, endDate, createdAt, votes]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        contractAddress:
+          type: string
+        status:
+          type: string
+          enum: [active, passed, failed, pending, cancelled]
+        createdBy:
+          type: string
+        quorumType:
+          type: string
+          enum: [simple_majority, supermajority, token_weighted, unanimous]
+        quorumThreshold:
+          type: number
+        startDate:
+          type: string
+        endDate:
+          type: string
+        createdAt:
+          type: string
+        votesFor:
+          type: integer
+        votesAgainst:
+          type: integer
+        votesAbstain:
+          type: integer
+        totalVotes:
+          type: integer
+        votes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Vote"
+
+    ProposalInput:
+      type: object
+      required: [title, projectId, quorumType, quorumThreshold, startDate, endDate, createdBy]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        projectId:
+          type: integer
+        quorumType:
+          type: string
+          enum: [simple_majority, supermajority, token_weighted, unanimous]
+        quorumThreshold:
+          type: number
+        startDate:
+          type: string
+        endDate:
+          type: string
+        createdBy:
+          type: string
+
+    ProposalUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, passed, failed, pending, cancelled]
+        title:
+          type: string
+        description:
+          type: string
+        endDate:
+          type: string
+
+    ProposalSummary:
+      type: object
+      required: [total, active, passed, failed, pending, cancelled]
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        passed:
+          type: integer
+        failed:
+          type: integer
+        pending:
+          type: integer
+        cancelled:
+          type: integer
+
+    Vote:
+      type: object
+      required: [id, proposalId, walletAddress, choice, createdAt]
+      properties:
+        id:
+          type: integer
+        proposalId:
+          type: integer
+        walletAddress:
+          type: string
+        choice:
+          type: string
+          enum: [for, against, abstain]
+        moatPoints:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    VoteInput:
+      type: object
+      required: [walletAddress, choice]
+      properties:
+        walletAddress:
+          type: string
+        choice:
+          type: string
+          enum: [for, against, abstain]
+
+    Admin:
+      type: object
+      required: [id, projectId, walletAddress, createdAt]
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        walletAddress:
+          type: string
+        createdAt:
+          type: string
+
+    AdminInput:
+      type: object
+      required: [projectId, walletAddress]
+      properties:
+        projectId:
+          type: integer
+        walletAddress:
+          type: string
+
+    LeaderboardEntry:
+      type: object
+      required: [walletAddress, points]
+      properties:
+        walletAddress:
+          type: string
+        points:
+          type: number
+        rank:
+          type: integer
