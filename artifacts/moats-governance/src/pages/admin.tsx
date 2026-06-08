@@ -113,26 +113,6 @@ export default function Admin() {
     });
   };
 
-  if (!isConnected) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-        <ShieldAlert size={48} className="text-muted-foreground opacity-50" />
-        <h2 className="text-2xl font-bold tracking-tight">Admin Access Required</h2>
-        <p className="text-muted-foreground max-w-md">Connect your wallet to access the administration panel.</p>
-        <appkit-button />
-      </div>
-    );
-  }
-
-  if (!isLoadingAdmins && !isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-        <AlertCircle size={48} className="text-red-500 opacity-50" />
-        <h2 className="text-2xl font-bold tracking-tight">Unauthorized Access</h2>
-        <p className="text-muted-foreground max-w-md">Your connected wallet ({address?.slice(0, 6)}...{address?.slice(-4)}) does not have administrator privileges.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in duration-500 max-w-5xl mx-auto">
