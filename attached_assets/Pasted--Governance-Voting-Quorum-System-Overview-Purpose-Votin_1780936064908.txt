@@ -1,0 +1,131 @@
+# Governance Voting & Quorum System Overview
+
+## Purpose
+
+Voting allows a community to make collective decisions, but
+participation alone does not guarantee legitimacy. A governance system
+should ensure that decisions are made by a sufficiently representative
+portion of the voting community.
+
+**Quorum** is the minimum amount of voting participation required for a
+proposal to be considered valid. Without quorum, a small group of voters
+could pass proposals that affect the entire protocol.
+
+A proposal should generally pass two independent checks:
+
+1.  Quorum Requirement --- enough voting power participated.
+2.  Approval Requirement --- enough of that voting power supported the
+    proposal.
+
+The governance system should support multiple quorum and voting models
+so protocols can choose the configuration that best matches their needs.
+
+------------------------------------------------------------------------
+
+# Quorum Types
+
+## 1. Fixed Token Quorum
+
+Requires a fixed amount of voting power to participate.
+
+Example: - Quorum = 1,000,000 voting power - Total votes cast =
+850,000 - Result: Proposal fails due to insufficient participation.
+
+Pros: - Simple and predictable - Easy to understand
+
+Cons: - Does not adapt as token supply changes
+
+## 2. Percentage-Based Quorum
+
+Requires participation equal to a percentage of total eligible voting
+power.
+
+Example: - Total voting power = 100,000,000 - Quorum = 4% - Required
+participation = 4,000,000
+
+## 3. Dynamic Quorum
+
+Quorum adjusts automatically based on historical participation.
+
+Example: - Average participation of last 10 proposals = 4,000,000 -
+Multiplier = 75% - Quorum = 3,000,000
+
+## 4. Participation Quorum
+
+Counts all votes regardless of position.
+
+Calculation: FOR + AGAINST + ABSTAIN
+
+## 5. Approval Quorum
+
+Requires a minimum amount of supporting votes.
+
+Calculation: FOR votes only
+
+## 6. For + Abstain Quorum
+
+Counts supportive and neutral participation.
+
+Calculation: FOR + ABSTAIN
+
+## 7. Dual Quorum
+
+Requires both: - Minimum participation - Minimum approval percentage
+
+## 8. Veto Quorum
+
+Proposal passes unless opposition reaches a specified threshold.
+
+## 9. Tiered Quorum
+
+Different proposal types require different quorum levels.
+
+Example: - Standard Proposal: 1% - Small Treasury Spend: 3% - Large
+Treasury Spend: 5% - Protocol Upgrade: 10% - Constitution Change: 20%
+
+## 10. Time-Weighted Quorum
+
+Quorum changes over the voting period.
+
+## 11. Security / Constitutional Quorum
+
+Critical governance actions require elevated participation requirements.
+
+------------------------------------------------------------------------
+
+# Voting Methods
+
+## Single Choice
+
+Voter selects one option.
+
+## Basic Voting
+
+FOR / AGAINST / ABSTAIN
+
+## Approval Voting
+
+Voters may select multiple options.
+
+## Ranked Choice Voting
+
+Voters rank options by preference.
+
+## Weighted Voting
+
+Voters distribute voting power across multiple options.
+
+## Quadratic Voting
+
+Voting cost increases quadratically, reducing dominance by large
+holders.
+
+------------------------------------------------------------------------
+
+# Recommended Default Governance Configuration
+
+-   Proposal threshold: 0.1% of total voting power
+-   Participation quorum: 2--10%
+-   Approval threshold: 50--66%
+-   Higher quorum requirements for treasury, protocol upgrades, and
+    constitutional changes
