@@ -5,7 +5,6 @@ import {
   useListProjects,
   useListAdmins,
   useCreateProposal,
-  useCreateProject,
   useAddAdmin,
   useRemoveAdmin,
   QuorumType,
@@ -177,7 +176,6 @@ export default function Admin() {
   });
 
   const createProposal = useCreateProposal();
-  const createProject = useCreateProject();
   const addAdmin = useAddAdmin();
   const removeAdmin = useRemoveAdmin();
 
@@ -256,26 +254,6 @@ export default function Admin() {
     }
   };
 
-  // Project form state
-  const [projName, setProjName] = React.useState("");
-  const [projContract, setProjContract] = React.useState("");
-  const [projDesc, setProjDesc] = React.useState("");
-  const [projLogo, setProjLogo] = React.useState("");
-
-  const handleCreateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    createProject.mutate({
-      data: { name: projName, contractAddress: projContract, description: projDesc, logoUrl: projLogo }
-    }, {
-      onSuccess: () => {
-        toast({ title: "Project registered successfully" });
-        setProjName(""); setProjContract(""); setProjDesc(""); setProjLogo("");
-        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      },
-      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" })
-    });
-  };
-
   // Admin form state
   const [adminWallet, setAdminWallet] = React.useState("");
   const [adminProjectId, setAdminProjectId] = React.useState("");
@@ -298,13 +276,12 @@ export default function Admin() {
     <div className="space-y-8 animate-in fade-in zoom-in duration-500 max-w-5xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Admin Command Center</h1>
-        <p className="text-muted-foreground">Manage projects, proposals, and permissions.</p>
+        <p className="text-muted-foreground">Manage proposals and administrator permissions.</p>
       </div>
 
       <Tabs defaultValue="proposals" className="w-full">
         <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none h-12 p-0 space-x-6 mb-8">
           <TabsTrigger value="proposals" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Create Proposal</TabsTrigger>
-          <TabsTrigger value="projects" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Manage Projects</TabsTrigger>
           <TabsTrigger value="admins" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Manage Admins</TabsTrigger>
         </TabsList>
 
@@ -477,39 +454,6 @@ export default function Admin() {
 
                 <Button type="submit" disabled={isSubmittingProposal || createProposal.isPending} className="w-full sm:w-auto">
                   {isSubmittingProposal || createProposal.isPending ? "Submitting..." : "Submit Proposal"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ── Manage Projects ──────────────────────────────────────────────── */}
-        <TabsContent value="projects">
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>Register Project</CardTitle>
-              <CardDescription>Add a new protocol or organization to the governance platform.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateProject} className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Project Name</Label>
-                  <Input value={projName} onChange={(e) => setProjName(e.target.value)} placeholder="e.g. Uniswap DAO" required className="bg-background" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contract Address</Label>
-                  <Input value={projContract} onChange={(e) => setProjContract(e.target.value)} placeholder="0x..." required className="bg-background font-mono" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea value={projDesc} onChange={(e) => setProjDesc(e.target.value)} placeholder="Project description" className="bg-background" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Logo URL (optional)</Label>
-                  <Input value={projLogo} onChange={(e) => setProjLogo(e.target.value)} placeholder="https://..." className="bg-background" />
-                </div>
-                <Button type="submit" disabled={createProject.isPending} className="w-full sm:w-auto">
-                  {createProject.isPending ? "Registering..." : "Register Project"}
                 </Button>
               </form>
             </CardContent>
