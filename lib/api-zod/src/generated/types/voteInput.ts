@@ -5,10 +5,13 @@
  * Moats App Governance API
  * OpenAPI spec version: 0.1.0
  */
+import type { VoteInputAllocations } from './voteInputAllocations';
 
 export interface VoteInput {
   walletAddress: string;
-  choice: string;
+  /** @nullable */
+  choice?: string | null;
+  allocations?: VoteInputAllocations;
   signature: string;
   message: string;
 }

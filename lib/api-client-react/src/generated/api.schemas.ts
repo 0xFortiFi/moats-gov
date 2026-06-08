@@ -105,11 +105,19 @@ export const ProposalDetailStatus = {
   cancelled: 'cancelled',
 } as const;
 
+/**
+ * @nullable
+ */
+export type VoteAllocations = {[key: string]: number} | null;
+
 export interface Vote {
   id: number;
   proposalId: number;
   walletAddress: string;
-  choice: string;
+  /** @nullable */
+  choice?: string | null;
+  /** @nullable */
+  allocations?: VoteAllocations;
   /** @nullable */
   moatPoints?: number | null;
   createdAt: string;
@@ -184,9 +192,13 @@ export interface ProposalSummary {
   cancelled: number;
 }
 
+export type VoteInputAllocations = {[key: string]: number};
+
 export interface VoteInput {
   walletAddress: string;
-  choice: string;
+  /** @nullable */
+  choice?: string | null;
+  allocations?: VoteInputAllocations;
   signature: string;
   message: string;
 }

@@ -580,7 +580,7 @@ components:
 
     Vote:
       type: object
-      required: [id, proposalId, walletAddress, choice, createdAt]
+      required: [id, proposalId, walletAddress, createdAt]
       properties:
         id:
           type: integer
@@ -589,7 +589,11 @@ components:
         walletAddress:
           type: string
         choice:
-          type: string
+          type: ["string", "null"]
+        allocations:
+          type: ["object", "null"]
+          additionalProperties:
+            type: number
         moatPoints:
           type: ["number", "null"]
         createdAt:
@@ -597,12 +601,16 @@ components:
 
     VoteInput:
       type: object
-      required: [walletAddress, choice, signature, message]
+      required: [walletAddress, signature, message]
       properties:
         walletAddress:
           type: string
         choice:
-          type: string
+          type: ["string", "null"]
+        allocations:
+          type: object
+          additionalProperties:
+            type: number
         signature:
           type: string
         message:

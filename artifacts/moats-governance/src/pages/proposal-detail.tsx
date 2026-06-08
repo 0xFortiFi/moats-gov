@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useRoute } from "wouter";
 import { useGetProposal, useListVotes, useCastVote, useGetVotingPower, getGetProposalQueryKey, getListVotesQueryKey, getGetVotingPowerQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
@@ -37,6 +39,9 @@ export default function ProposalDetail() {
   const castVote = useCastVote();
   const { signMessageAsync } = useSignMessage();
 
+  // Per-option percentage inputs (keyed by option index) for weighted voting.
+  const [allocInputs, setAllocInputs] = useState<Record<number, string>>({});
+
   if (isLoadingProposal) {
     return <div className="space-y-8"><Skeleton className="h-32 w-full" /><Skeleton className="h-96 w-full" /></div>;
   }
@@ -53,16 +58,33 @@ export default function ProposalDetail() {
   const againstPercent = totalVotes > 0 ? ((proposal.votesAgainst || 0) / totalVotes) * 100 : 0;
   const abstainPercent = totalVotes > 0 ? ((proposal.votesAbstain || 0) / totalVotes) * 100 : 0;
 
-  // For custom voting methods, tallies are derived from the individual votes.
+  // For custom (weighted) methods, results aggregate each voter's per-option
+  // percentage allocation. Legacy single-choice custom votes (no allocations)
+  // count as 100% to their chosen option.
   const customTotal = votes?.length ?? 0;
-  const optionTallies = customOptions.map((opt) => {
-    const count = votes?.filter((v) => v.choice === opt).length ?? 0;
-    return {
-      option: opt,
-      count,
-      percent: customTotal > 0 ? (count / customTotal) * 100 : 0,
-    };
+  const optionScores = customOptions.map((opt) => {
+    let score = 0;
+    votes?.forEach((v) => {
+      const alloc = v.allocations as Record<string, number> | null | undefined;
+      if (alloc && Object.keys(alloc).length > 0) {
+        score += alloc[opt] ?? 0;
+      } else if (v.choice === opt) {
+        score += 100;
+      }
+    });
+    return { option: opt, score };
   });
+  const totalScore = optionScores.reduce((s, t) => s + t.score, 0);
+  const optionTallies = optionScores.map((t) => ({
+    option: t.option,
+    percent: totalScore > 0 ? (t.score / totalScore) * 100 : 0,
+  }));
+
+  // Live total of the weighted-vote percentage inputs.
+  const allocSum = customOptions.reduce(
+    (sum, _, idx) => sum + (parseInt(allocInputs[idx] || "0", 10) || 0),
+    0
+  );
 
   const quorumLabels: Record<string, string> = {
     simple_majority: "Simple Majority (>51%)",
@@ -93,6 +115,54 @@ export default function ProposalDetail() {
     }, {
       onSuccess: () => {
         toast({ title: "Vote cast successfully", description: "Your vote has been recorded." });
+        queryClient.invalidateQueries({ queryKey: getGetProposalQueryKey(proposalId) });
+        queryClient.invalidateQueries({ queryKey: getListVotesQueryKey(proposalId) });
+      },
+      onError: (err: any) => {
+        toast({ title: "Failed to cast vote", description: err.message || "An error occurred", variant: "destructive" });
+      }
+    });
+  };
+
+  const handleWeightedVote = async () => {
+    if (!address) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet to vote", variant: "destructive" });
+      return;
+    }
+
+    // Build the option -> percentage map, keeping only options with a share.
+    const cleaned: Record<string, number> = {};
+    customOptions.forEach((opt, idx) => {
+      const pct = parseInt(allocInputs[idx] || "0", 10) || 0;
+      if (pct > 0) cleaned[opt] = pct;
+    });
+    const total = Object.values(cleaned).reduce((a, b) => a + b, 0);
+    if (total !== 100) {
+      toast({ title: "Allocations must total 100%", description: `Your percentages currently add up to ${total}%.`, variant: "destructive" });
+      return;
+    }
+
+    const lines = customOptions
+      .filter((opt) => cleaned[opt] > 0)
+      .map((opt) => `${opt}: ${cleaned[opt]}%`)
+      .join("\n");
+    const message = `Moats App Governance\n\nConfirm weighted vote on proposal #${proposalId} (${proposal.title}).\n\n${lines}\n\nWallet: ${address}\nTimestamp: ${new Date().toISOString()}`;
+
+    let signature: string;
+    try {
+      signature = await signMessageAsync({ message });
+    } catch {
+      toast({ title: "Signature required", description: "You must sign the message to confirm your vote.", variant: "destructive" });
+      return;
+    }
+
+    castVote.mutate({
+      id: proposalId,
+      data: { walletAddress: address, allocations: cleaned, signature, message }
+    }, {
+      onSuccess: () => {
+        toast({ title: "Vote cast successfully", description: "Your weighted vote has been recorded." });
+        setAllocInputs({});
         queryClient.invalidateQueries({ queryKey: getGetProposalQueryKey(proposalId) });
         queryClient.invalidateQueries({ queryKey: getListVotesQueryKey(proposalId) });
       },
@@ -183,10 +253,21 @@ export default function ProposalDetail() {
                       <TableRow key={vote.id} className="border-border/50">
                         <TableCell className="font-mono text-sm">{vote.walletAddress.slice(0, 6)}...{vote.walletAddress.slice(-4)}</TableCell>
                         <TableCell>
-                          {vote.choice === 'for' && <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20"><Check size={12} className="mr-1"/> For</Badge>}
-                          {vote.choice === 'against' && <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20"><X size={12} className="mr-1"/> Against</Badge>}
-                          {vote.choice === 'abstain' && <Badge className="bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 border-slate-500/20"><MinusCircle size={12} className="mr-1"/> Abstain</Badge>}
-                          {!['for', 'against', 'abstain'].includes(vote.choice) && <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">{vote.choice}</Badge>}
+                          {vote.allocations && Object.keys(vote.allocations).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(vote.allocations as Record<string, number>).map(([opt, pct]) => (
+                                <Badge key={opt} className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 font-normal">{opt}: {pct}%</Badge>
+                              ))}
+                            </div>
+                          ) : vote.choice === 'for' ? (
+                            <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20"><Check size={12} className="mr-1"/> For</Badge>
+                          ) : vote.choice === 'against' ? (
+                            <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20"><X size={12} className="mr-1"/> Against</Badge>
+                          ) : vote.choice === 'abstain' ? (
+                            <Badge className="bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 border-slate-500/20"><MinusCircle size={12} className="mr-1"/> Abstain</Badge>
+                          ) : vote.choice ? (
+                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">{vote.choice}</Badge>
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-right font-mono font-medium text-primary">
                           {vote.moatPoints?.toLocaleString() || '-'}
@@ -245,18 +326,46 @@ export default function ProposalDetail() {
                   <p className="text-sm text-green-500 font-medium">You have already voted</p>
                 </div>
               ) : isCustomMethod ? (
-                <div className="space-y-3">
-                  {customOptions.map((opt, idx) => (
-                    <Button
-                      key={idx}
-                      className="w-full justify-start bg-primary/5 text-foreground hover:bg-primary hover:text-primary-foreground border border-primary/30 transition-all font-medium h-auto py-3 whitespace-normal text-left"
-                      onClick={() => handleVote(opt)}
-                      disabled={castVote.isPending}
-                    >
-                      <span className="font-mono text-xs text-primary/70 mr-2 shrink-0">{idx + 1}.</span>
-                      {opt}
-                    </Button>
-                  ))}
+                <div className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Enter the percentage of your vote to allocate to each option. Your allocations must add up to 100%.
+                  </p>
+                  <div className="space-y-3">
+                    {customOptions.map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <span className="flex items-start gap-1.5 min-w-0 flex-1 text-sm">
+                          <span className="font-mono text-xs text-primary/70 shrink-0 mt-0.5">{idx + 1}.</span>
+                          <span className="break-words">{opt}</span>
+                        </span>
+                        <div className="relative shrink-0 w-24">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={allocInputs[idx] ?? ""}
+                            onChange={(e) => setAllocInputs((prev) => ({ ...prev, [idx]: e.target.value }))}
+                            disabled={castVote.isPending}
+                            className="pr-7 text-right font-mono"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={`flex justify-between items-center text-sm font-mono px-1 ${allocSum === 100 ? "text-green-500" : "text-muted-foreground"}`}>
+                    <span>Total allocated</span>
+                    <span className="font-bold">{allocSum}% / 100%</span>
+                  </div>
+                  <Button
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold"
+                    size="lg"
+                    onClick={handleWeightedVote}
+                    disabled={castVote.isPending || allocSum !== 100}
+                  >
+                    {castVote.isPending ? "Submitting…" : "Submit Votes"}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -304,7 +413,7 @@ export default function ProposalDetail() {
                           <span className="font-mono text-xs text-primary/70 shrink-0">{idx + 1}.</span>
                           <span className="break-words">{t.option}</span>
                         </span>
-                        <span className="font-mono shrink-0">{t.count} ({t.percent.toFixed(1)}%)</span>
+                        <span className="font-mono shrink-0">{t.percent.toFixed(1)}%</span>
                       </div>
                       <Progress value={t.percent} className="h-2 bg-muted [&>div]:bg-primary" />
                     </div>

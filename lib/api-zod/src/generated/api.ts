@@ -115,7 +115,8 @@ export const GetProposalResponse = zod.object({
   "id": zod.number(),
   "proposalId": zod.number(),
   "walletAddress": zod.string(),
-  "choice": zod.string(),
+  "choice": zod.string().nullish(),
+  "allocations": zod.record(zod.string(), zod.number()).nullish(),
   "moatPoints": zod.number().nullish(),
   "createdAt": zod.string()
 }))
@@ -200,7 +201,8 @@ export const ListVotesResponseItem = zod.object({
   "id": zod.number(),
   "proposalId": zod.number(),
   "walletAddress": zod.string(),
-  "choice": zod.string(),
+  "choice": zod.string().nullish(),
+  "allocations": zod.record(zod.string(), zod.number()).nullish(),
   "moatPoints": zod.number().nullish(),
   "createdAt": zod.string()
 })
@@ -216,7 +218,8 @@ export const CastVoteParams = zod.object({
 
 export const CastVoteBody = zod.object({
   "walletAddress": zod.string(),
-  "choice": zod.string(),
+  "choice": zod.string().nullish(),
+  "allocations": zod.record(zod.string(), zod.number()).optional(),
   "signature": zod.string(),
   "message": zod.string()
 })

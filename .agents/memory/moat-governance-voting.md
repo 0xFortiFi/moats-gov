@@ -45,12 +45,27 @@ Creation enforces the invariant so new non-basic proposals always carry 2–10 u
 (case-insensitive, trimmed) options; legacy non-basic rows with null options therefore
 fall back to basic on both ends consistently.
 
-Vote `choice` stores the option string verbatim for custom methods. Backend validates
-the choice is in the allowed set. The for/against/abstain integer columns are only
-bumped for basic; `totalVotes` always bumps. **Per-option tallies are derived
-client-side** by grouping the fetched votes list by `choice` (no per-option counters in
-DB) — fine at current vote volume; revisit with server aggregation if it grows.
-
 **Why options must be unique:** tallies key on the exact choice string, so a duplicate
 option would split/double-count and push aggregate % over 100. Enforced server-side
 (`Options must be unique`) and mirrored client-side.
+
+## Custom voting is WEIGHTED percentage allocation (not single-click)
+Custom-option proposals do NOT cast one choice — voters allocate a whole-number
+percentage across options that must sum to exactly 100, submit once, and sign once.
+The `votes` table is a dual model: `choice` (nullable) for basic, `allocations`
+(nullable `jsonb` `Record<string,number>`) for weighted. A DB CHECK constraint
+`vote_choice_xor_allocations` enforces exactly one of the two is set per row.
+
+Results for custom proposals = each option's share of total allocated weight
+(`Σ allocation% / Σ all allocation%`), derived client-side; legacy single-choice
+custom votes (allocations null, choice = option) count as 100% to that option.
+
+**Signature binding for weighted votes must be EXACT, not substring.**
+`messageMatchesWeightedVote` reconstructs the allocation map from the signed message
+(anchored on the proposal's known options + full-line `\n<opt>: <pct>%` boundaries),
+counts every `^.+: \d+%$` line to reject extras, and requires the parsed map to
+deep-equal the submitted allocation.
+**Why:** an earlier substring (`message.includes(...)`) check let a signature be bound
+to a different allocation than what gets stored (extra/missing/overlapping lines).
+**How to apply:** if the client weighted-vote message format in `proposal-detail.tsx`
+changes, update this parser in lockstep or all weighted votes 400.

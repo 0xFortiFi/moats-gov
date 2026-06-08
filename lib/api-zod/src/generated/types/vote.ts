@@ -5,12 +5,16 @@
  * Moats App Governance API
  * OpenAPI spec version: 0.1.0
  */
+import type { VoteAllocations } from './voteAllocations';
 
 export interface Vote {
   id: number;
   proposalId: number;
   walletAddress: string;
-  choice: string;
+  /** @nullable */
+  choice?: string | null;
+  /** @nullable */
+  allocations?: VoteAllocations;
   /** @nullable */
   moatPoints?: number | null;
   createdAt: string;

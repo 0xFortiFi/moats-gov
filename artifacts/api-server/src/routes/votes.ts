@@ -31,6 +31,58 @@ function messageMatchesVote(
   return choiceOk && proposalOk && walletOk && freshOk;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Weighted-vote variant: confirms the signed message is bound to this proposal,
+// wallet, and is recent, AND that the allocation block in the signed message is
+// EXACTLY the allocation being stored — same options, same percentages, with no
+// extra, missing, or conflicting "<option>: <pct>%" lines. An exact comparison
+// (rather than substring checks) prevents a signature from being bound to a
+// different allocation than what gets recorded. Must stay in sync with the
+// weighted message built on the client in proposal-detail.tsx.
+function messageMatchesWeightedVote(
+  message: string,
+  walletAddress: string,
+  proposalId: number,
+  allocations: Record<string, number>,
+  options: string[]
+): boolean {
+  const proposalOk = message.includes(`proposal #${proposalId}`);
+  const walletOk = message.toLowerCase().includes(walletAddress.toLowerCase());
+
+  const tsMatch = message.match(/Timestamp:\s*(\S+)/);
+  let freshOk = false;
+  if (tsMatch) {
+    const ts = Date.parse(tsMatch[1]);
+    if (!Number.isNaN(ts)) {
+      freshOk = Math.abs(Date.now() - ts) <= 10 * 60 * 1000;
+    }
+  }
+
+  // Reconstruct the allocation map from the signed message, anchored on the
+  // proposal's known options and full-line boundaries (so overlapping option
+  // names cannot be confused with one another).
+  const fromMessage: Record<string, number> = {};
+  for (const opt of options) {
+    const re = new RegExp(`(?:^|\\n)${escapeRegExp(opt)}: (\\d+)%(?=\\n|$)`);
+    const m = message.match(re);
+    if (m) fromMessage[opt] = parseInt(m[1], 10);
+  }
+  // Count every "<text>: <number>%" line so extra/spurious allocation lines in
+  // the signed message are rejected, not silently ignored.
+  const allocLineCount = (message.match(/^.+: \d+%$/gm) || []).length;
+
+  const keys = Object.keys(allocations);
+  const exactOk =
+    allocLineCount === keys.length &&
+    Object.keys(fromMessage).length === keys.length &&
+    keys.every((k) => fromMessage[k] === allocations[k]);
+
+  return proposalOk && walletOk && freshOk && exactOk;
+}
+
 async function fetchMoatPoints(
   walletAddress: string,
   contractAddress: string | null
@@ -68,6 +120,7 @@ router.get("/proposals/:id/votes", async (req, res) => {
         proposalId: v.proposalId,
         walletAddress: v.walletAddress,
         choice: v.choice,
+        allocations: v.allocations,
         moatPoints: v.moatPoints,
         createdAt: v.createdAt.toISOString(),
       }))
@@ -165,32 +218,87 @@ router.post("/proposals/:id/votes", async (req, res) => {
       return;
     }
 
-    // The chosen value must be valid for this proposal's voting method.
-    // Basic uses the fixed FOR / AGAINST / ABSTAIN set; every other method
-    // votes on the admin-defined custom options.
+    // Basic proposals use the fixed FOR / AGAINST / ABSTAIN set and store a
+    // single choice. Every other method votes on the admin-defined options as a
+    // weighted allocation: the voter spreads percentages across the options and
+    // the per-option totals are stored in `allocations`.
     const isBasic = !proposal.options || proposal.options.length === 0;
-    const allowedChoices = isBasic
-      ? ["for", "against", "abstain"]
-      : proposal.options!;
-    if (!allowedChoices.includes(parsed.data.choice)) {
-      res.status(400).json({ error: "Invalid choice for this proposal" });
-      return;
-    }
+    let choiceToStore: string | null = null;
+    let allocationsToStore: Record<string, number> | null = null;
 
-    // The signature must be bound to this exact vote (proposal + choice +
-    // wallet) and recent, otherwise a valid signature could be replayed.
-    if (
-      !messageMatchesVote(
-        parsed.data.message,
-        parsed.data.walletAddress,
-        proposalId,
-        parsed.data.choice
-      )
-    ) {
-      res
-        .status(400)
-        .json({ error: "Signed message does not match this vote" });
-      return;
+    if (isBasic) {
+      const choice = parsed.data.choice;
+      if (!choice || !["for", "against", "abstain"].includes(choice)) {
+        res.status(400).json({ error: "Invalid choice for this proposal" });
+        return;
+      }
+      // The signature must be bound to this exact vote (proposal + choice +
+      // wallet) and recent, otherwise a valid signature could be replayed.
+      if (
+        !messageMatchesVote(
+          parsed.data.message,
+          parsed.data.walletAddress,
+          proposalId,
+          choice
+        )
+      ) {
+        res
+          .status(400)
+          .json({ error: "Signed message does not match this vote" });
+        return;
+      }
+      choiceToStore = choice;
+    } else {
+      const options = proposal.options!;
+      const allocations = parsed.data.allocations;
+      if (!allocations || typeof allocations !== "object") {
+        res
+          .status(400)
+          .json({ error: "This proposal requires a weighted vote allocation" });
+        return;
+      }
+      const entries = Object.entries(allocations);
+      for (const [opt, pct] of entries) {
+        if (!options.includes(opt)) {
+          res.status(400).json({ error: "Invalid option in allocation" });
+          return;
+        }
+        if (
+          typeof pct !== "number" ||
+          !Number.isInteger(pct) ||
+          pct < 0 ||
+          pct > 100
+        ) {
+          res.status(400).json({
+            error: "Allocation percentages must be whole numbers between 0 and 100",
+          });
+          return;
+        }
+      }
+      // Keep only options the voter actually allocated to.
+      const cleaned: Record<string, number> = {};
+      for (const [opt, pct] of entries) if (pct > 0) cleaned[opt] = pct;
+      const sum = Object.values(cleaned).reduce((acc, pct) => acc + pct, 0);
+      if (sum !== 100) {
+        res.status(400).json({ error: "Allocations must add up to 100%" });
+        return;
+      }
+      // Bind the signature to the exact allocation, proposal, wallet, recency.
+      if (
+        !messageMatchesWeightedVote(
+          parsed.data.message,
+          parsed.data.walletAddress,
+          proposalId,
+          cleaned,
+          options
+        )
+      ) {
+        res
+          .status(400)
+          .json({ error: "Signed message does not match this vote" });
+        return;
+      }
+      allocationsToStore = cleaned;
     }
 
     // Fetch the voter's Moat Points for this proposal's Moat.
@@ -206,7 +314,8 @@ router.post("/proposals/:id/votes", async (req, res) => {
       .values({
         proposalId,
         walletAddress: parsed.data.walletAddress,
-        choice: parsed.data.choice,
+        choice: choiceToStore,
+        allocations: allocationsToStore,
         moatPoints,
       })
       .onConflictDoNothing({
@@ -226,9 +335,9 @@ router.post("/proposals/:id/votes", async (req, res) => {
       totalVotes: proposal.totalVotes + 1,
     };
     if (isBasic) {
-      if (parsed.data.choice === "for")
+      if (choiceToStore === "for")
         voteUpdate.votesFor = proposal.votesFor + 1;
-      else if (parsed.data.choice === "against")
+      else if (choiceToStore === "against")
         voteUpdate.votesAgainst = proposal.votesAgainst + 1;
       else voteUpdate.votesAbstain = proposal.votesAbstain + 1;
     }
@@ -240,6 +349,7 @@ router.post("/proposals/:id/votes", async (req, res) => {
       proposalId: vote.proposalId,
       walletAddress: vote.walletAddress,
       choice: vote.choice,
+      allocations: vote.allocations,
       moatPoints: vote.moatPoints,
       createdAt: vote.createdAt.toISOString(),
     });
