@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { projectsTable, insertProjectSchema } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { CreateProjectBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -24,7 +24,13 @@ router.get("/projects", async (req, res) => {
               description: m.description ?? null,
             }))
           )
-          .onConflictDoNothing();
+          .onConflictDoUpdate({
+            target: projectsTable.contractAddress,
+            set: {
+              name: sql`excluded.name`,
+              description: sql`excluded.description`,
+            },
+          });
       }
     } catch (syncErr) {
       // Non-fatal — still return whatever is in the DB
