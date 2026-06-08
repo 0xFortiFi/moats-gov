@@ -5,11 +5,11 @@
  * Moats App Governance API
  * OpenAPI spec version: 0.1.0
  */
-import type { VoteInputChoice } from './voteInputChoice';
 
-export interface VoteInput {
+export interface VotingPower {
   walletAddress: string;
-  choice: VoteInputChoice;
-  signature: string;
-  message: string;
+  /** @nullable */
+  moatPoints: number | null;
+  /** @nullable */
+  contractAddress?: string | null;
 }

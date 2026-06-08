@@ -29,3 +29,4 @@ export * from './voteChoice';
 export * from './voteInput';
 export * from './voteInputChoice';
 export * from './votingMethod';
+export * from './votingPower';

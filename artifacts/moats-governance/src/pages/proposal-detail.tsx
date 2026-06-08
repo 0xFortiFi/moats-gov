@@ -1,5 +1,5 @@
 import { useRoute } from "wouter";
-import { useGetProposal, useListVotes, useCastVote, getGetProposalQueryKey, getListVotesQueryKey } from "@workspace/api-client-react";
+import { useGetProposal, useListVotes, useCastVote, useGetVotingPower, getGetProposalQueryKey, getListVotesQueryKey, getGetVotingPowerQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
-import { Clock, Shield, Check, X, MinusCircle, AlertCircle } from "lucide-react";
+import { Clock, Shield, Check, X, MinusCircle, AlertCircle, Coins } from "lucide-react";
 import { getStatusColor } from "./dashboard";
-import { useAccount } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,7 +28,14 @@ export default function ProposalDetail() {
     query: { enabled: !!proposalId, queryKey: getListVotesQueryKey(proposalId) }
   });
 
+  const { data: votingPower, isLoading: isLoadingVotingPower } = useGetVotingPower(
+    proposalId,
+    address ?? "",
+    { query: { enabled: !!proposalId && !!address, queryKey: getGetVotingPowerQueryKey(proposalId, address ?? "") } }
+  );
+
   const castVote = useCastVote();
+  const { signMessageAsync } = useSignMessage();
 
   if (isLoadingProposal) {
     return <div className="space-y-8"><Skeleton className="h-32 w-full" /><Skeleton className="h-96 w-full" /></div>;
@@ -50,18 +57,28 @@ export default function ProposalDetail() {
     unanimous: "Unanimous"
   };
 
-  const handleVote = (choice: "for" | "against" | "abstain") => {
+  const handleVote = async (choice: "for" | "against" | "abstain") => {
     if (!address) {
       toast({ title: "Wallet not connected", description: "Please connect your wallet to vote", variant: "destructive" });
       return;
     }
-    
+
+    const message = `Moats App Governance\n\nConfirm vote "${choice.toUpperCase()}" on proposal #${proposalId} (${proposal.title}).\n\nWallet: ${address}\nTimestamp: ${new Date().toISOString()}`;
+
+    let signature: string;
+    try {
+      signature = await signMessageAsync({ message });
+    } catch {
+      toast({ title: "Signature required", description: "You must sign the message to confirm your vote.", variant: "destructive" });
+      return;
+    }
+
     castVote.mutate({
       id: proposalId,
-      data: { walletAddress: address, choice }
+      data: { walletAddress: address, choice, signature, message }
     }, {
       onSuccess: () => {
-        toast({ title: "Vote cast successfully", description: "Your vote has been recorded on-chain." });
+        toast({ title: "Vote cast successfully", description: "Your vote has been recorded." });
         queryClient.invalidateQueries({ queryKey: getGetProposalQueryKey(proposalId) });
         queryClient.invalidateQueries({ queryKey: getListVotesQueryKey(proposalId) });
       },
@@ -72,6 +89,12 @@ export default function ProposalDetail() {
   };
 
   const hasVoted = votes?.some(v => v.walletAddress.toLowerCase() === address?.toLowerCase());
+  const now = Date.now();
+  const isVotingOpen =
+    proposal.status !== "cancelled" &&
+    now >= new Date(proposal.startDate).getTime() &&
+    now <= new Date(proposal.endDate).getTime();
+  const votingNotStarted = now < new Date(proposal.startDate).getTime();
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in duration-500 max-w-5xl mx-auto">
@@ -169,6 +192,21 @@ export default function ProposalDetail() {
               <CardDescription>Voting power is determined by your Moat Points balance.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {isConnected && (
+                <div className="flex items-center justify-between p-3 mb-1 bg-muted/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Coins size={16} className="text-primary" />
+                    <span>Your Moat Points</span>
+                  </div>
+                  {isLoadingVotingPower ? (
+                    <Skeleton className="h-5 w-16" />
+                  ) : (
+                    <span className="font-mono font-bold text-primary">
+                      {votingPower?.moatPoints != null ? votingPower.moatPoints.toLocaleString() : "0"}
+                    </span>
+                  )}
+                </div>
+              )}
               {!isConnected ? (
                 <div className="text-center p-4 bg-muted/50 rounded-lg border border-border">
                   <AlertCircle className="mx-auto mb-2 text-muted-foreground" size={24} />
@@ -180,9 +218,11 @@ export default function ProposalDetail() {
                     Connect Wallet
                   </button>
                 </div>
-              ) : proposal.status !== 'active' ? (
+              ) : !isVotingOpen ? (
                 <div className="text-center p-4 bg-muted/50 rounded-lg border border-border">
-                  <p className="text-sm text-muted-foreground">Voting is closed for this proposal.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {votingNotStarted ? "Voting has not started yet for this proposal." : "Voting is closed for this proposal."}
+                  </p>
                 </div>
               ) : hasVoted ? (
                 <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20">

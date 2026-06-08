@@ -199,6 +199,16 @@ export const VoteInputChoice = {
 export interface VoteInput {
   walletAddress: string;
   choice: VoteInputChoice;
+  signature: string;
+  message: string;
+}
+
+export interface VotingPower {
+  walletAddress: string;
+  /** @nullable */
+  moatPoints: number | null;
+  /** @nullable */
+  contractAddress?: string | null;
 }
 
 export interface Admin {

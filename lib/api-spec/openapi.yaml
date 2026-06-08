@@ -199,6 +199,30 @@ paths:
         "400":
           description: Already voted or invalid
 
+  /proposals/{id}/voting-power/{walletAddress}:
+    get:
+      operationId: getVotingPower
+      tags: [votes]
+      summary: Get a wallet's Moat Points (voting power) for a proposal's Moat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: walletAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Voting power for the wallet on this proposal's Moat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VotingPower"
+
   /projects:
     get:
       operationId: listProjects
@@ -561,13 +585,28 @@ components:
 
     VoteInput:
       type: object
-      required: [walletAddress, choice]
+      required: [walletAddress, choice, signature, message]
       properties:
         walletAddress:
           type: string
         choice:
           type: string
           enum: [for, against, abstain]
+        signature:
+          type: string
+        message:
+          type: string
+
+    VotingPower:
+      type: object
+      required: [walletAddress, moatPoints]
+      properties:
+        walletAddress:
+          type: string
+        moatPoints:
+          type: ["number", "null"]
+        contractAddress:
+          type: ["string", "null"]
 
     Admin:
       type: object

@@ -207,7 +207,24 @@ export const CastVoteParams = zod.object({
 
 export const CastVoteBody = zod.object({
   "walletAddress": zod.string(),
-  "choice": zod.enum(['for', 'against', 'abstain'])
+  "choice": zod.enum(['for', 'against', 'abstain']),
+  "signature": zod.string(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get a wallet's Moat Points (voting power) for a proposal's Moat
+ */
+export const GetVotingPowerParams = zod.object({
+  "id": zod.coerce.number(),
+  "walletAddress": zod.coerce.string()
+})
+
+export const GetVotingPowerResponse = zod.object({
+  "walletAddress": zod.string(),
+  "moatPoints": zod.number().nullable(),
+  "contractAddress": zod.string().nullish()
 })
 
 

@@ -34,7 +34,8 @@ import type {
   ProposalSummary,
   ProposalUpdate,
   Vote,
-  VoteInput
+  VoteInput,
+  VotingPower
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -725,6 +726,88 @@ export const useCastVote = <TError = ErrorType<void>,
       > => {
       return useMutation(getCastVoteMutationOptions(options));
     }
+
+export const getGetVotingPowerUrl = (id: number,
+    walletAddress: string,) => {
+
+
+
+
+  return `/api/proposals/${id}/voting-power/${walletAddress}`
+}
+
+/**
+ * @summary Get a wallet's Moat Points (voting power) for a proposal's Moat
+ */
+export const getVotingPower = async (id: number,
+    walletAddress: string, options?: RequestInit): Promise<VotingPower> => {
+
+  return customFetch<VotingPower>(getGetVotingPowerUrl(id,walletAddress),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVotingPowerQueryKey = (id: number,
+    walletAddress: string,) => {
+    return [
+    `/api/proposals/${id}/voting-power/${walletAddress}`
+    ] as const;
+    }
+
+
+export const getGetVotingPowerQueryOptions = <TData = Awaited<ReturnType<typeof getVotingPower>>, TError = ErrorType<unknown>>(id: number,
+    walletAddress: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVotingPower>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVotingPowerQueryKey(id,walletAddress);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVotingPower>>> = ({ signal }) => getVotingPower(id,walletAddress, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && walletAddress), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVotingPower>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVotingPowerQueryResult = NonNullable<Awaited<ReturnType<typeof getVotingPower>>>
+export type GetVotingPowerQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get a wallet's Moat Points (voting power) for a proposal's Moat
+ */
+
+export function useGetVotingPower<TData = Awaited<ReturnType<typeof getVotingPower>>, TError = ErrorType<unknown>>(
+ id: number,
+    walletAddress: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVotingPower>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVotingPowerQueryOptions(id,walletAddress,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListProjectsUrl = () => {
 
