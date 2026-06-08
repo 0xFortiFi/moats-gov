@@ -66,6 +66,7 @@ router.get("/proposals", async (req, res) => {
         quorumThreshold: proposals.quorumThreshold,
         approvalThreshold: proposals.approvalThreshold,
         votingMethod: proposals.votingMethod,
+        options: proposals.options,
         startDate: proposals.startDate.toISOString(),
         endDate: proposals.endDate.toISOString(),
         createdAt: proposals.createdAt.toISOString(),
@@ -97,6 +98,37 @@ router.post("/proposals", async (req, res) => {
       return;
     }
 
+    // Custom options only apply to non-basic voting methods. Basic uses the
+    // fixed FOR / AGAINST / ABSTAIN choices and stores no options.
+    let options: string[] | null = null;
+    if (parsed.data.votingMethod !== "basic") {
+      const cleaned = (parsed.data.options ?? [])
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0);
+      if (cleaned.length < 2) {
+        res.status(400).json({
+          error: "This voting method requires at least 2 options",
+        });
+        return;
+      }
+      if (cleaned.length > 10) {
+        res.status(400).json({ error: "A maximum of 10 options is allowed" });
+        return;
+      }
+      // Reject duplicate options (case-insensitive) — tallies are keyed by the
+      // exact choice string, so duplicates would split/double-count votes.
+      const seen = new Set<string>();
+      for (const o of cleaned) {
+        const key = o.toLowerCase();
+        if (seen.has(key)) {
+          res.status(400).json({ error: "Options must be unique" });
+          return;
+        }
+        seen.add(key);
+      }
+      options = cleaned;
+    }
+
     const [proposal] = await db
       .insert(proposalsTable)
       .values({
@@ -109,6 +141,7 @@ router.post("/proposals", async (req, res) => {
         quorumThreshold: parsed.data.quorumThreshold,
         approvalThreshold: parsed.data.approvalThreshold ?? null,
         votingMethod: parsed.data.votingMethod,
+        options,
         startDate: new Date(parsed.data.startDate),
         endDate: new Date(parsed.data.endDate),
       })
@@ -132,6 +165,7 @@ router.post("/proposals", async (req, res) => {
       quorumThreshold: proposal.quorumThreshold,
       approvalThreshold: proposal.approvalThreshold,
       votingMethod: proposal.votingMethod,
+      options: proposal.options,
       startDate: proposal.startDate.toISOString(),
       endDate: proposal.endDate.toISOString(),
       createdAt: proposal.createdAt.toISOString(),
@@ -179,6 +213,7 @@ router.get("/proposals/:id", async (req, res) => {
       quorumThreshold: proposals.quorumThreshold,
       approvalThreshold: proposals.approvalThreshold,
       votingMethod: proposals.votingMethod,
+      options: proposals.options,
       startDate: proposals.startDate.toISOString(),
       endDate: proposals.endDate.toISOString(),
       createdAt: proposals.createdAt.toISOString(),
@@ -242,6 +277,7 @@ router.patch("/proposals/:id", async (req, res) => {
       quorumThreshold: updated.quorumThreshold,
       approvalThreshold: updated.approvalThreshold,
       votingMethod: updated.votingMethod,
+      options: updated.options,
       startDate: updated.startDate.toISOString(),
       endDate: updated.endDate.toISOString(),
       createdAt: updated.createdAt.toISOString(),
@@ -293,6 +329,7 @@ router.delete("/proposals/:id", async (req, res) => {
       quorumThreshold: deleted.quorumThreshold,
       approvalThreshold: deleted.approvalThreshold,
       votingMethod: deleted.votingMethod,
+      options: deleted.options,
       startDate: deleted.startDate.toISOString(),
       endDate: deleted.endDate.toISOString(),
       createdAt: deleted.createdAt.toISOString(),

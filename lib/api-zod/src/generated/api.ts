@@ -36,6 +36,7 @@ export const ListProposalsResponseItem = zod.object({
   "quorumThreshold": zod.number(),
   "approvalThreshold": zod.number().nullish(),
   "votingMethod": zod.enum(['basic', 'single_choice', 'approval_voting', 'ranked_choice', 'weighted', 'quadratic']),
+  "options": zod.array(zod.string()).nullish(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "createdAt": zod.string(),
@@ -50,6 +51,10 @@ export const ListProposalsResponse = zod.array(ListProposalsResponseItem)
 /**
  * @summary Create a new proposal
  */
+export const createProposalBodyOptionsMax = 10;
+
+
+
 export const CreateProposalBody = zod.object({
   "title": zod.string(),
   "description": zod.string().optional(),
@@ -58,6 +63,7 @@ export const CreateProposalBody = zod.object({
   "quorumThreshold": zod.number(),
   "approvalThreshold": zod.number().optional(),
   "votingMethod": zod.enum(['basic', 'single_choice', 'approval_voting', 'ranked_choice', 'weighted', 'quadratic']),
+  "options": zod.array(zod.string()).max(createProposalBodyOptionsMax).optional(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "createdBy": zod.string()
@@ -97,6 +103,7 @@ export const GetProposalResponse = zod.object({
   "quorumThreshold": zod.number(),
   "approvalThreshold": zod.number().nullish(),
   "votingMethod": zod.enum(['basic', 'single_choice', 'approval_voting', 'ranked_choice', 'weighted', 'quadratic']),
+  "options": zod.array(zod.string()).nullish(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "createdAt": zod.string(),
@@ -108,7 +115,7 @@ export const GetProposalResponse = zod.object({
   "id": zod.number(),
   "proposalId": zod.number(),
   "walletAddress": zod.string(),
-  "choice": zod.enum(['for', 'against', 'abstain']),
+  "choice": zod.string(),
   "moatPoints": zod.number().nullish(),
   "createdAt": zod.string()
 }))
@@ -141,6 +148,7 @@ export const UpdateProposalResponse = zod.object({
   "quorumThreshold": zod.number(),
   "approvalThreshold": zod.number().nullish(),
   "votingMethod": zod.enum(['basic', 'single_choice', 'approval_voting', 'ranked_choice', 'weighted', 'quadratic']),
+  "options": zod.array(zod.string()).nullish(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "createdAt": zod.string(),
@@ -170,6 +178,7 @@ export const DeleteProposalResponse = zod.object({
   "quorumThreshold": zod.number(),
   "approvalThreshold": zod.number().nullish(),
   "votingMethod": zod.enum(['basic', 'single_choice', 'approval_voting', 'ranked_choice', 'weighted', 'quadratic']),
+  "options": zod.array(zod.string()).nullish(),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "createdAt": zod.string(),
@@ -191,7 +200,7 @@ export const ListVotesResponseItem = zod.object({
   "id": zod.number(),
   "proposalId": zod.number(),
   "walletAddress": zod.string(),
-  "choice": zod.enum(['for', 'against', 'abstain']),
+  "choice": zod.string(),
   "moatPoints": zod.number().nullish(),
   "createdAt": zod.string()
 })
@@ -207,7 +216,7 @@ export const CastVoteParams = zod.object({
 
 export const CastVoteBody = zod.object({
   "walletAddress": zod.string(),
-  "choice": zod.enum(['for', 'against', 'abstain']),
+  "choice": zod.string(),
   "signature": zod.string(),
   "message": zod.string()
 })

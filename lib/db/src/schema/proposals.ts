@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { projectsTable } from "./projects";
@@ -14,6 +14,7 @@ export const proposalsTable = pgTable("proposals", {
   quorumThreshold: real("quorum_threshold").notNull().default(51),
   approvalThreshold: real("approval_threshold"),
   votingMethod: text("voting_method").notNull().default("basic"),
+  options: jsonb("options").$type<string[]>(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   votesFor: integer("votes_for").notNull().default(0),

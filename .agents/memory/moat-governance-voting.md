@@ -33,3 +33,24 @@ changes, update `messageMatchesVote` in lockstep.
 Duplicate votes are prevented by a DB unique constraint `uniq_vote_proposal_wallet`
 on `(proposal_id, wallet_address)` + `onConflictDoNothing(...).returning()` (empty → 409-style 400).
 App-level select-then-insert alone was racy.
+
+## Custom options for non-basic voting methods
+Every voting method except `basic` votes on admin-defined custom options stored in
+`proposals.options` (nullable `jsonb` `string[]`). Basic uses the fixed
+for/against/abstain set and stores `options = null`.
+
+Discriminator rule (kept identical on frontend AND backend to avoid divergence):
+**a proposal is "custom" iff `options` is non-empty**, NOT `votingMethod !== 'basic'`.
+Creation enforces the invariant so new non-basic proposals always carry 2–10 unique
+(case-insensitive, trimmed) options; legacy non-basic rows with null options therefore
+fall back to basic on both ends consistently.
+
+Vote `choice` stores the option string verbatim for custom methods. Backend validates
+the choice is in the allowed set. The for/against/abstain integer columns are only
+bumped for basic; `totalVotes` always bumps. **Per-option tallies are derived
+client-side** by grouping the fetched votes list by `choice` (no per-option counters in
+DB) — fine at current vote volume; revisit with server aggregation if it grows.
+
+**Why options must be unique:** tallies key on the exact choice string, so a duplicate
+option would split/double-count and push aggregate % over 100. Enforced server-side
+(`Options must be unique`) and mirrored client-side.

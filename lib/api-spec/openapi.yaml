@@ -447,6 +447,10 @@ components:
           type: ["number", "null"]
         votingMethod:
           $ref: "#/components/schemas/VotingMethod"
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
         startDate:
           type: string
         endDate:
@@ -491,6 +495,10 @@ components:
           type: ["number", "null"]
         votingMethod:
           $ref: "#/components/schemas/VotingMethod"
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
         startDate:
           type: string
         endDate:
@@ -528,6 +536,11 @@ components:
           type: number
         votingMethod:
           $ref: "#/components/schemas/VotingMethod"
+        options:
+          type: array
+          maxItems: 10
+          items:
+            type: string
         startDate:
           type: string
         endDate:
@@ -577,7 +590,6 @@ components:
           type: string
         choice:
           type: string
-          enum: [for, against, abstain]
         moatPoints:
           type: ["number", "null"]
         createdAt:
@@ -591,7 +603,6 @@ components:
           type: string
         choice:
           type: string
-          enum: [for, against, abstain]
         signature:
           type: string
         message:

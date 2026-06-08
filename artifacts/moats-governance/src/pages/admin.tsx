@@ -187,6 +187,7 @@ export default function Admin() {
   const [propThreshold, setPropThreshold] = React.useState("10");
   const [propApprovalThreshold, setPropApprovalThreshold] = React.useState("51");
   const [propVotingMethod, setPropVotingMethod] = React.useState<VotingMethod>("basic");
+  const [propOptions, setPropOptions] = React.useState<string[]>(["", ""]);
   const [propStart, setPropStart] = React.useState("");
   const [propEnd, setPropEnd] = React.useState("");
   const [isSubmittingProposal, setIsSubmittingProposal] = React.useState(false);
@@ -195,9 +196,20 @@ export default function Admin() {
   const selectedQuorumMeta = QUORUM_TYPES.find(q => q.value === propQuorum)!;
   const selectedVotingMeta = VOTING_METHODS.find(v => v.value === propVotingMethod)!;
 
+  const isCustomMethod = propVotingMethod !== "basic";
+  const cleanedOptions = propOptions.map(o => o.trim()).filter(o => o.length > 0);
+
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!propMoatAddr || !selectedMoat) return;
+    if (isCustomMethod && cleanedOptions.length < 2) {
+      toast({ title: "Add at least 2 options", description: "This voting method needs custom options for voters to choose from.", variant: "destructive" });
+      return;
+    }
+    if (isCustomMethod && new Set(cleanedOptions.map(o => o.toLowerCase())).size !== cleanedOptions.length) {
+      toast({ title: "Options must be unique", description: "Remove duplicate options before submitting.", variant: "destructive" });
+      return;
+    }
     setIsSubmittingProposal(true);
     try {
       const existingProject = projects?.find(p => p.contractAddress.toLowerCase() === propMoatAddr.toLowerCase());
@@ -230,6 +242,7 @@ export default function Admin() {
           quorumThreshold: parseFloat(propThreshold),
           approvalThreshold: selectedQuorumMeta.hasApprovalThreshold ? parseFloat(propApprovalThreshold) : undefined,
           votingMethod: propVotingMethod,
+          options: isCustomMethod ? cleanedOptions : undefined,
           startDate: new Date(propStart).toISOString(),
           endDate: new Date(propEnd).toISOString(),
           createdBy: address ?? "0x0000000000000000000000000000000000000000",
@@ -239,6 +252,7 @@ export default function Admin() {
           toast({ title: "Proposal created successfully" });
           setPropTitle(""); setPropDesc(""); setPropMoatAddr("");
           setPropThreshold("10"); setPropApprovalThreshold("51");
+          setPropOptions(["", ""]);
           setPropStart(""); setPropEnd("");
           queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
           setIsSubmittingProposal(false);
@@ -372,6 +386,59 @@ export default function Admin() {
                       </p>
                     )}
                   </div>
+
+                  {/* Custom voting options (non-basic methods) */}
+                  {isCustomMethod && (
+                    <div className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-foreground/90">Voting Options</Label>
+                        <span className="text-xs text-muted-foreground font-mono">{cleanedOptions.length}/10</span>
+                      </div>
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <Info size={12} className="mt-0.5 shrink-0" />
+                        Add the answers voters will choose from (2–10 options).
+                      </p>
+                      <div className="space-y-2">
+                        {propOptions.map((opt, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">{idx + 1}.</span>
+                            <Input
+                              value={opt}
+                              onChange={(e) => {
+                                const next = [...propOptions];
+                                next[idx] = e.target.value;
+                                setPropOptions(next);
+                              }}
+                              placeholder={`Option ${idx + 1}`}
+                              className="bg-background"
+                              maxLength={120}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 disabled:opacity-30"
+                              disabled={propOptions.length <= 2}
+                              onClick={() => setPropOptions(propOptions.filter((_, i) => i !== idx))}
+                              aria-label={`Remove option ${idx + 1}`}
+                            >
+                              <Trash2 size={15} />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-dashed"
+                        disabled={propOptions.length >= 10}
+                        onClick={() => setPropOptions([...propOptions, ""])}
+                      >
+                        <Plus size={14} className="mr-1.5" /> Add Option
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Quorum Type */}
                   <div className="space-y-2">

@@ -16,6 +16,8 @@ export interface ProposalInput {
   quorumThreshold: number;
   approvalThreshold?: number;
   votingMethod: VotingMethod;
+  /** @maxItems 10 */
+  options?: string[];
   startDate: string;
   endDate: string;
   createdBy: string;

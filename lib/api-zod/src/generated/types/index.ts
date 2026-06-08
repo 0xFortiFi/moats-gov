@@ -25,8 +25,6 @@ export * from './proposalUpdate';
 export * from './proposalUpdateStatus';
 export * from './quorumType';
 export * from './vote';
-export * from './voteChoice';
 export * from './voteInput';
-export * from './voteInputChoice';
 export * from './votingMethod';
 export * from './votingPower';

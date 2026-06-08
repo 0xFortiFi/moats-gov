@@ -25,6 +25,8 @@ export interface ProposalDetail {
   /** @nullable */
   approvalThreshold?: number | null;
   votingMethod: VotingMethod;
+  /** @nullable */
+  options?: string[] | null;
   startDate: string;
   endDate: string;
   createdAt: string;

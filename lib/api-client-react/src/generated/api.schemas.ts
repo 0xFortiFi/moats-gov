@@ -83,6 +83,8 @@ export interface Proposal {
   /** @nullable */
   approvalThreshold?: number | null;
   votingMethod: VotingMethod;
+  /** @nullable */
+  options?: string[] | null;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -103,20 +105,11 @@ export const ProposalDetailStatus = {
   cancelled: 'cancelled',
 } as const;
 
-export type VoteChoice = typeof VoteChoice[keyof typeof VoteChoice];
-
-
-export const VoteChoice = {
-  for: 'for',
-  against: 'against',
-  abstain: 'abstain',
-} as const;
-
 export interface Vote {
   id: number;
   proposalId: number;
   walletAddress: string;
-  choice: VoteChoice;
+  choice: string;
   /** @nullable */
   moatPoints?: number | null;
   createdAt: string;
@@ -137,6 +130,8 @@ export interface ProposalDetail {
   /** @nullable */
   approvalThreshold?: number | null;
   votingMethod: VotingMethod;
+  /** @nullable */
+  options?: string[] | null;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -155,6 +150,8 @@ export interface ProposalInput {
   quorumThreshold: number;
   approvalThreshold?: number;
   votingMethod: VotingMethod;
+  /** @maxItems 10 */
+  options?: string[];
   startDate: string;
   endDate: string;
   createdBy: string;
@@ -187,18 +184,9 @@ export interface ProposalSummary {
   cancelled: number;
 }
 
-export type VoteInputChoice = typeof VoteInputChoice[keyof typeof VoteInputChoice];
-
-
-export const VoteInputChoice = {
-  for: 'for',
-  against: 'against',
-  abstain: 'abstain',
-} as const;
-
 export interface VoteInput {
   walletAddress: string;
-  choice: VoteInputChoice;
+  choice: string;
   signature: string;
   message: string;
 }

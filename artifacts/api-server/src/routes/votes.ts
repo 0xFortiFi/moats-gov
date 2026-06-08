@@ -165,6 +165,18 @@ router.post("/proposals/:id/votes", async (req, res) => {
       return;
     }
 
+    // The chosen value must be valid for this proposal's voting method.
+    // Basic uses the fixed FOR / AGAINST / ABSTAIN set; every other method
+    // votes on the admin-defined custom options.
+    const isBasic = !proposal.options || proposal.options.length === 0;
+    const allowedChoices = isBasic
+      ? ["for", "against", "abstain"]
+      : proposal.options!;
+    if (!allowedChoices.includes(parsed.data.choice)) {
+      res.status(400).json({ error: "Invalid choice for this proposal" });
+      return;
+    }
+
     // The signature must be bound to this exact vote (proposal + choice +
     // wallet) and recent, otherwise a valid signature could be replayed.
     if (
@@ -207,14 +219,19 @@ router.post("/proposals/:id/votes", async (req, res) => {
     }
     const vote = inserted[0];
 
-    // Update proposal vote counts
+    // Update proposal vote counts. The for/against/abstain columns only apply
+    // to the basic method; per-option tallies for custom methods are derived
+    // from the votes table directly. totalVotes is always incremented.
     const voteUpdate: Partial<typeof proposalsTable.$inferSelect> = {
       totalVotes: proposal.totalVotes + 1,
     };
-    if (parsed.data.choice === "for") voteUpdate.votesFor = proposal.votesFor + 1;
-    else if (parsed.data.choice === "against")
-      voteUpdate.votesAgainst = proposal.votesAgainst + 1;
-    else voteUpdate.votesAbstain = proposal.votesAbstain + 1;
+    if (isBasic) {
+      if (parsed.data.choice === "for")
+        voteUpdate.votesFor = proposal.votesFor + 1;
+      else if (parsed.data.choice === "against")
+        voteUpdate.votesAgainst = proposal.votesAgainst + 1;
+      else voteUpdate.votesAbstain = proposal.votesAbstain + 1;
+    }
 
     await db.update(proposalsTable).set(voteUpdate).where(eq(proposalsTable.id, proposalId));
 

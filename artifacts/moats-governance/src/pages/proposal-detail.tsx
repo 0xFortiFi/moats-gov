@@ -45,10 +45,24 @@ export default function ProposalDetail() {
     return <div className="text-center py-20 text-muted-foreground">Proposal not found.</div>;
   }
 
+  const customOptions = proposal.options ?? [];
+  const isCustomMethod = customOptions.length > 0;
+
   const totalVotes = (proposal.votesFor || 0) + (proposal.votesAgainst || 0) + (proposal.votesAbstain || 0);
   const forPercent = totalVotes > 0 ? ((proposal.votesFor || 0) / totalVotes) * 100 : 0;
   const againstPercent = totalVotes > 0 ? ((proposal.votesAgainst || 0) / totalVotes) * 100 : 0;
   const abstainPercent = totalVotes > 0 ? ((proposal.votesAbstain || 0) / totalVotes) * 100 : 0;
+
+  // For custom voting methods, tallies are derived from the individual votes.
+  const customTotal = votes?.length ?? 0;
+  const optionTallies = customOptions.map((opt) => {
+    const count = votes?.filter((v) => v.choice === opt).length ?? 0;
+    return {
+      option: opt,
+      count,
+      percent: customTotal > 0 ? (count / customTotal) * 100 : 0,
+    };
+  });
 
   const quorumLabels: Record<string, string> = {
     simple_majority: "Simple Majority (>51%)",
@@ -57,7 +71,7 @@ export default function ProposalDetail() {
     unanimous: "Unanimous"
   };
 
-  const handleVote = async (choice: "for" | "against" | "abstain") => {
+  const handleVote = async (choice: string) => {
     if (!address) {
       toast({ title: "Wallet not connected", description: "Please connect your wallet to vote", variant: "destructive" });
       return;
@@ -172,6 +186,7 @@ export default function ProposalDetail() {
                           {vote.choice === 'for' && <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20"><Check size={12} className="mr-1"/> For</Badge>}
                           {vote.choice === 'against' && <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20"><X size={12} className="mr-1"/> Against</Badge>}
                           {vote.choice === 'abstain' && <Badge className="bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 border-slate-500/20"><MinusCircle size={12} className="mr-1"/> Abstain</Badge>}
+                          {!['for', 'against', 'abstain'].includes(vote.choice) && <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">{vote.choice}</Badge>}
                         </TableCell>
                         <TableCell className="text-right font-mono font-medium text-primary">
                           {vote.moatPoints?.toLocaleString() || '-'}
@@ -229,6 +244,20 @@ export default function ProposalDetail() {
                   <Check className="mx-auto mb-2 text-green-500" size={24} />
                   <p className="text-sm text-green-500 font-medium">You have already voted</p>
                 </div>
+              ) : isCustomMethod ? (
+                <div className="space-y-3">
+                  {customOptions.map((opt, idx) => (
+                    <Button
+                      key={idx}
+                      className="w-full justify-start bg-primary/5 text-foreground hover:bg-primary hover:text-primary-foreground border border-primary/30 transition-all font-medium h-auto py-3 whitespace-normal text-left"
+                      onClick={() => handleVote(opt)}
+                      disabled={castVote.isPending}
+                    >
+                      <span className="font-mono text-xs text-primary/70 mr-2 shrink-0">{idx + 1}.</span>
+                      {opt}
+                    </Button>
+                  ))}
+                </div>
               ) : (
                 <div className="space-y-3">
                   <Button 
@@ -266,34 +295,57 @@ export default function ProposalDetail() {
               <CardTitle>Current Results</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <div className="flex justify-between mb-2 text-sm font-medium">
-                  <span className="text-green-500">For</span>
-                  <span className="font-mono">{proposal.votesFor || 0} ({forPercent.toFixed(1)}%)</span>
-                </div>
-                <Progress value={forPercent} className="h-2 bg-muted [&>div]:bg-green-500" />
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-2 text-sm font-medium">
-                  <span className="text-red-500">Against</span>
-                  <span className="font-mono">{proposal.votesAgainst || 0} ({againstPercent.toFixed(1)}%)</span>
-                </div>
-                <Progress value={againstPercent} className="h-2 bg-muted [&>div]:bg-red-500" />
-              </div>
+              {isCustomMethod ? (
+                <>
+                  {optionTallies.map((t, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between mb-2 text-sm font-medium gap-3">
+                        <span className="text-foreground flex items-start gap-1.5 min-w-0">
+                          <span className="font-mono text-xs text-primary/70 shrink-0">{idx + 1}.</span>
+                          <span className="break-words">{t.option}</span>
+                        </span>
+                        <span className="font-mono shrink-0">{t.count} ({t.percent.toFixed(1)}%)</span>
+                      </div>
+                      <Progress value={t.percent} className="h-2 bg-muted [&>div]:bg-primary" />
+                    </div>
+                  ))}
+                  <div className="pt-4 border-t border-border flex justify-between items-center text-sm font-mono text-muted-foreground">
+                    <span>Total Votes</span>
+                    <span className="font-bold text-foreground">{customTotal}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex justify-between mb-2 text-sm font-medium">
+                      <span className="text-green-500">For</span>
+                      <span className="font-mono">{proposal.votesFor || 0} ({forPercent.toFixed(1)}%)</span>
+                    </div>
+                    <Progress value={forPercent} className="h-2 bg-muted [&>div]:bg-green-500" />
+                  </div>
 
-              <div>
-                <div className="flex justify-between mb-2 text-sm font-medium">
-                  <span className="text-slate-400">Abstain</span>
-                  <span className="font-mono">{proposal.votesAbstain || 0} ({abstainPercent.toFixed(1)}%)</span>
-                </div>
-                <Progress value={abstainPercent} className="h-2 bg-muted [&>div]:bg-slate-500" />
-              </div>
+                  <div>
+                    <div className="flex justify-between mb-2 text-sm font-medium">
+                      <span className="text-red-500">Against</span>
+                      <span className="font-mono">{proposal.votesAgainst || 0} ({againstPercent.toFixed(1)}%)</span>
+                    </div>
+                    <Progress value={againstPercent} className="h-2 bg-muted [&>div]:bg-red-500" />
+                  </div>
 
-              <div className="pt-4 border-t border-border flex justify-between items-center text-sm font-mono text-muted-foreground">
-                <span>Total Votes</span>
-                <span className="font-bold text-foreground">{totalVotes}</span>
-              </div>
+                  <div>
+                    <div className="flex justify-between mb-2 text-sm font-medium">
+                      <span className="text-slate-400">Abstain</span>
+                      <span className="font-mono">{proposal.votesAbstain || 0} ({abstainPercent.toFixed(1)}%)</span>
+                    </div>
+                    <Progress value={abstainPercent} className="h-2 bg-muted [&>div]:bg-slate-500" />
+                  </div>
+
+                  <div className="pt-4 border-t border-border flex justify-between items-center text-sm font-mono text-muted-foreground">
+                    <span>Total Votes</span>
+                    <span className="font-bold text-foreground">{totalVotes}</span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
