@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { useAccount } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
 import { 
   useListProjects, 
   useListAdmins, 
@@ -17,19 +18,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Plus, Trash2, ShieldAlert } from "lucide-react";
+import { Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+
+type VerifiedMoat = {
+  contractAddress: string;
+  name: string;
+  network: string;
+  description: string | null;
+  tags: Array<{ name: string; color: string }>;
+};
 
 export default function Admin() {
-  const { isConnected, address } = useAccount();
+  const { address } = useAccount();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading: isLoadingProjects } = useListProjects();
   const { data: admins, isLoading: isLoadingAdmins } = useListAdmins({});
 
-  const isAdmin = admins?.some(a => a.walletAddress.toLowerCase() === address?.toLowerCase());
+  const { data: verifiedMoats, isLoading: isLoadingMoats } = useQuery<VerifiedMoat[]>({
+    queryKey: ["verified-moats"],
+    queryFn: async () => {
+      const res = await fetch("/api/verified-moats");
+      if (!res.ok) throw new Error("Failed to fetch verified moats");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const createProposal = useCreateProposal();
   const createProject = useCreateProject();
@@ -38,35 +57,71 @@ export default function Admin() {
 
   const [propTitle, setPropTitle] = React.useState("");
   const [propDesc, setPropDesc] = React.useState("");
-  const [propProjectId, setPropProjectId] = React.useState("");
+  const [propMoatAddr, setPropMoatAddr] = React.useState("");
   const [propQuorum, setPropQuorum] = React.useState<ProposalInputQuorumType>("simple_majority");
   const [propThreshold, setPropThreshold] = React.useState("51");
   const [propStart, setPropStart] = React.useState("");
   const [propEnd, setPropEnd] = React.useState("");
+  const [isSubmittingProposal, setIsSubmittingProposal] = React.useState(false);
+
+  const selectedMoat = verifiedMoats?.find(m => m.contractAddress === propMoatAddr);
 
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address) return;
-    createProposal.mutate({
-      data: {
-        title: propTitle,
-        description: propDesc,
-        projectId: parseInt(propProjectId, 10),
-        quorumType: propQuorum,
-        quorumThreshold: parseInt(propThreshold, 10),
-        startDate: new Date(propStart).toISOString(),
-        endDate: new Date(propEnd).toISOString(),
-        createdBy: address,
+    if (!propMoatAddr || !selectedMoat) return;
+    setIsSubmittingProposal(true);
+    try {
+      // Find or register the moat as a local project
+      const existingProject = projects?.find(p => p.contractAddress.toLowerCase() === propMoatAddr.toLowerCase());
+      let projectId: number;
+      if (existingProject) {
+        projectId = existingProject.id;
+      } else {
+        // Auto-register the verified moat as a project
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: selectedMoat.name,
+            contractAddress: selectedMoat.contractAddress,
+            description: selectedMoat.description,
+            logoUrl: null,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to register project");
+        const newProject = await res.json();
+        projectId = newProject.id;
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       }
-    }, {
-      onSuccess: () => {
-        toast({ title: "Proposal created successfully" });
-        setPropTitle(""); setPropDesc(""); setPropProjectId("");
-        setPropThreshold("51"); setPropStart(""); setPropEnd("");
-        queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
-      },
-      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" })
-    });
+
+      createProposal.mutate({
+        data: {
+          title: propTitle,
+          description: propDesc,
+          projectId,
+          quorumType: propQuorum,
+          quorumThreshold: parseFloat(propThreshold),
+          startDate: new Date(propStart).toISOString(),
+          endDate: new Date(propEnd).toISOString(),
+          createdBy: address ?? "0x0000000000000000000000000000000000000000",
+        }
+      }, {
+        onSuccess: () => {
+          toast({ title: "Proposal created successfully" });
+          setPropTitle(""); setPropDesc(""); setPropMoatAddr("");
+          setPropThreshold("51"); setPropStart(""); setPropEnd("");
+          queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
+          setIsSubmittingProposal(false);
+        },
+        onError: (err: any) => {
+          toast({ title: "Error creating proposal", description: err.message, variant: "destructive" });
+          setIsSubmittingProposal(false);
+        }
+      });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+      setIsSubmittingProposal(false);
+    }
   };
 
   const [projName, setProjName] = React.useState("");
@@ -137,17 +192,41 @@ export default function Admin() {
             <CardContent>
               <form onSubmit={handleCreateProposal} className="space-y-6">
                 <div className="space-y-2">
-                  <Label>Project</Label>
-                  <Select value={propProjectId} onValueChange={setPropProjectId} required>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects?.map(p => (
-                        <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                  <Label>Verified Moat</Label>
+                  {isLoadingMoats ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Select value={propMoatAddr} onValueChange={setPropMoatAddr} required>
+                      <SelectTrigger className="bg-background" data-testid="select-moat">
+                        <SelectValue placeholder="Select a verified Moat..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {verifiedMoats?.map(m => (
+                          <SelectItem key={m.contractAddress} value={m.contractAddress}>
+                            <span className="font-medium">{m.name}</span>
+                            <span className="ml-2 font-mono text-xs text-muted-foreground">
+                              {m.contractAddress.slice(0, 6)}...{m.contractAddress.slice(-4)}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {selectedMoat && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <CheckCircle2 size={13} className="text-green-500" />
+                      <span className="text-xs text-muted-foreground font-mono">{selectedMoat.contractAddress}</span>
+                      {selectedMoat.tags.map(t => (
+                        <span
+                          key={t.name}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                          style={{ backgroundColor: t.color + "22", color: t.color, border: `1px solid ${t.color}44` }}
+                        >
+                          {t.name}
+                        </span>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">

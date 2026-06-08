@@ -129,4 +129,40 @@ router.get("/projects/:id/leaderboard", async (req, res) => {
   }
 });
 
+router.get("/verified-moats", async (req, res) => {
+  try {
+    const response = await fetch(`${MOAT_API}/moat-config`);
+    if (!response.ok) {
+      res.status(502).json({ error: "Failed to reach Moats API" });
+      return;
+    }
+    const data = (await response.json()) as Array<{
+      _id: string;
+      contractAddress: string;
+      network: string;
+      status: string;
+      rewardStrategy?: string;
+      tags?: Array<{ name: string; color: string }>;
+      rewardTokens?: Array<{ name: string; symbol: string }>;
+    }>;
+    const verified = data
+      .filter((m) => m.status === "Verified")
+      .map((m) => {
+        const tokenName = m.rewardTokens?.[0]?.name ?? null;
+        const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
+        return {
+          contractAddress: m.contractAddress,
+          name: tokenName ?? shortAddr,
+          network: m.network,
+          description: m.rewardStrategy ?? null,
+          tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
+        };
+      });
+    res.json(verified);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch verified moats");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
