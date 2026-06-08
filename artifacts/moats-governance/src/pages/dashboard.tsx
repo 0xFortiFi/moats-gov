@@ -140,6 +140,10 @@ export default function Dashboard() {
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-sm font-medium">Avalanche C-Chain Synced</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-sm font-medium">Mainnet Synced</span>
               </div>
               <div className="flex items-center gap-3">
