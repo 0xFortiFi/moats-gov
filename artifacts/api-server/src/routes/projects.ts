@@ -129,62 +129,89 @@ router.get("/projects/:id/leaderboard", async (req, res) => {
   }
 });
 
+// ── On-chain name resolution ──────────────────────────────────────────────────
+const AVAX_RPC = "https://api.avax.network/ext/bc/C/rpc";
+
+async function ethCall(to: string, data: string): Promise<string> {
+  const res = await fetch(AVAX_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_call",
+      params: [{ to, data }, "latest"],
+    }),
+  });
+  const json = (await res.json()) as { result?: string };
+  return json.result ?? "0x";
+}
+
+function decodeAbiString(hex: string): string | null {
+  if (!hex || hex === "0x") return null;
+  try {
+    const h = hex.slice(2);
+    const len = parseInt(h.slice(64, 128), 16);
+    return Buffer.from(h.slice(128, 128 + len * 2), "hex").toString("utf8").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveMoatName(moatAddr: string): Promise<string | null> {
+  try {
+    const stakingRaw = await ethCall(moatAddr, "0x72f702f3"); // stakingToken()
+    if (!stakingRaw || stakingRaw === "0x") return null;
+    const tokenAddr = "0x" + stakingRaw.slice(-40);
+    const nameRaw = await ethCall(tokenAddr, "0x06fdde03"); // name()
+    const name = decodeAbiString(nameRaw);
+    return name ? `${name} Moat` : null;
+  } catch {
+    return null;
+  }
+}
+
+// 10-minute in-memory cache
+let verifiedMoatsCache: { data: unknown[]; expiresAt: number } | null = null;
+
 router.get("/verified-moats", async (req, res) => {
   try {
+    if (verifiedMoatsCache && Date.now() < verifiedMoatsCache.expiresAt) {
+      res.json(verifiedMoatsCache.data);
+      return;
+    }
+
     const response = await fetch(`${MOAT_API}/moat-config`);
     if (!response.ok) {
       res.status(502).json({ error: "Failed to reach Moats API" });
       return;
     }
     const data = (await response.json()) as Array<{
-      _id: string;
       contractAddress: string;
       network: string;
       status: string;
       rewardStrategy?: string;
       tags?: Array<{ name: string; color: string }>;
-      rewardTokens?: Array<{ name: string; symbol: string }>;
     }>;
-    // Generic/utility token names that don't represent the moat project
-    const GENERIC_TOKEN_NAMES = new Set([
-      "usd coin", "wrapped avax", "wrapped ether", "wrapped eth",
-      "bitcoin", "ethereum", "tether", "dai"
-    ]);
 
-    const extractMoatName = (m: typeof data[0]): string => {
+    const verified = data.filter((m) => m.status === "Verified");
+
+    // Resolve all moat names on-chain in parallel
+    const names = await Promise.all(verified.map((m) => resolveMoatName(m.contractAddress)));
+
+    const result = verified.map((m, i) => {
       const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
+      return {
+        contractAddress: m.contractAddress,
+        name: names[i] ?? `Moat ${shortAddr}`,
+        network: m.network,
+        description: m.rewardStrategy ?? null,
+        tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
+      };
+    });
 
-      // 1. First non-generic reward token name
-      const projectToken = (m.rewardTokens ?? []).find(
-        (t) => !GENERIC_TOKEN_NAMES.has(t.name.toLowerCase())
-      );
-      if (projectToken) return projectToken.name;
-
-      // 2. Parse rewardStrategy for a known project name pattern
-      const strategy = m.rewardStrategy ?? "";
-      // Match "X is a ..." or "X is the ..." patterns (capitalized project names)
-      const isAMatch = strategy.match(/^([A-Z][A-Za-z0-9 ]{2,30})\s+is\s+(a|the|an)\s+/);
-      if (isAMatch) return isAMatch[1].trim();
-      // Match "Stake X/Y LP tokens from ... Y" — pick trailing proper noun
-      const stakeMatch = strategy.match(/\b([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+){0,3})\.\s*$/);
-      if (stakeMatch) return stakeMatch[1].trim();
-
-      return shortAddr;
-    };
-
-    const verified = data
-      .filter((m) => m.status === "Verified")
-      .map((m) => {
-        const tags = (m.tags ?? []).map((t) => ({ name: t.name, color: t.color }));
-        return {
-          contractAddress: m.contractAddress,
-          name: extractMoatName(m),
-          network: m.network,
-          description: m.rewardStrategy ?? null,
-          tags,
-        };
-      });
-    res.json(verified);
+    verifiedMoatsCache = { data: result, expiresAt: Date.now() + 10 * 60 * 1000 };
+    res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch verified moats");
     res.status(500).json({ error: "Internal server error" });
