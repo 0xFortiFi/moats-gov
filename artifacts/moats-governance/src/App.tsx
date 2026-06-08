@@ -11,6 +11,7 @@ import ProjectDetail from "@/pages/project-detail";
 import Proposals from "@/pages/proposals";
 import ProposalDetail from "@/pages/proposal-detail";
 import Admin from "@/pages/admin";
+import Owner from "@/pages/owner";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ function Router() {
         <Route path="/proposals" component={Proposals} />
         <Route path="/proposals/:id" component={ProposalDetail} />
         <Route path="/admin" component={Admin} />
+        <Route path="/owner" component={Owner} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
