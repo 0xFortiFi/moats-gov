@@ -1,0 +1,1 @@
+- [Moat logo source](moat-logos.md) — verified-moat logos = DexScreener info.imageUrl of highest-liquidity pair of the staking token (same as pro.moats.app); ~7/20 legitimately have none.

@@ -22,6 +22,7 @@ router.get("/projects", async (req, res) => {
               name: m.name,
               contractAddress: m.contractAddress,
               description: m.description ?? null,
+              logoUrl: m.logoUrl ?? null,
             }))
           )
           .onConflictDoUpdate({
@@ -29,6 +30,7 @@ router.get("/projects", async (req, res) => {
             set: {
               name: sql`excluded.name`,
               description: sql`excluded.description`,
+              logoUrl: sql`coalesce(excluded.logo_url, ${projectsTable.logoUrl})`,
             },
           });
       }
@@ -185,14 +187,35 @@ function decodeAbiString(hex: string): string | null {
   }
 }
 
-async function resolveMoatName(moatAddr: string): Promise<string | null> {
+async function resolveMoat(moatAddr: string): Promise<{ name: string | null; stakingToken: string | null }> {
   try {
     const stakingRaw = await ethCall(moatAddr, "0x72f702f3"); // stakingToken()
-    if (!stakingRaw || stakingRaw === "0x") return null;
+    if (!stakingRaw || stakingRaw === "0x") return { name: null, stakingToken: null };
     const tokenAddr = "0x" + stakingRaw.slice(-40);
     const nameRaw = await ethCall(tokenAddr, "0x06fdde03"); // name()
     const name = decodeAbiString(nameRaw);
-    return name ? `${name} Moat` : null;
+    return { name: name ? `${name} Moat` : null, stakingToken: tokenAddr };
+  } catch {
+    return { name: null, stakingToken: null };
+  }
+}
+
+// Resolve a token's logo via DexScreener — picks the image from the highest-liquidity pair.
+// This is the same source pro.moats.app uses for moat logos.
+async function resolveTokenLogo(tokenAddr: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddr}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      pairs?: Array<{ info?: { imageUrl?: string }; liquidity?: { usd?: number } }>;
+    };
+    let best: { liq: number; url: string } | null = null;
+    for (const p of data.pairs ?? []) {
+      const url = p.info?.imageUrl;
+      const liq = p.liquidity?.usd ?? 0;
+      if (url && (!best || liq > best.liq)) best = { liq, url };
+    }
+    return best?.url ?? null;
   } catch {
     return null;
   }
@@ -203,6 +226,7 @@ type VerifiedMoat = {
   name: string;
   network: string;
   description: string | null;
+  logoUrl: string | null;
   tags: Array<{ name: string; color: string }>;
 };
 
@@ -226,15 +250,19 @@ async function getVerifiedMoats(): Promise<VerifiedMoat[]> {
   }>;
 
   const verified = data.filter((m) => m.status === "Verified");
-  const names = await Promise.all(verified.map((m) => resolveMoatName(m.contractAddress)));
+  const resolved = await Promise.all(verified.map((m) => resolveMoat(m.contractAddress)));
+  const logos = await Promise.all(
+    resolved.map((r) => (r.stakingToken ? resolveTokenLogo(r.stakingToken) : Promise.resolve(null))),
+  );
 
   const result: VerifiedMoat[] = verified.map((m, i) => {
     const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
     return {
       contractAddress: m.contractAddress,
-      name: names[i] ?? `Moat ${shortAddr}`,
+      name: resolved[i].name ?? `Moat ${shortAddr}`,
       network: m.network,
       description: m.rewardStrategy ?? null,
+      logoUrl: logos[i],
       tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
     };
   });
