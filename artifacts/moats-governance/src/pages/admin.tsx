@@ -4,11 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import {
   useListProjects,
   useListAdmins,
+  useListProposals,
   useCreateProposal,
+  useUpdateProposal,
+  useDeleteProposal,
   useAddAdmin,
   useRemoveAdmin,
   QuorumType,
   VotingMethod,
+  Proposal,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,10 +22,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle2, Info } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Info, Pencil, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type VerifiedMoat = {
   contractAddress: string;
@@ -164,6 +170,7 @@ export default function Admin() {
 
   const { data: projects, isLoading: isLoadingProjects } = useListProjects();
   const { data: admins } = useListAdmins({});
+  const { data: allProposals, isLoading: isLoadingProposals } = useListProposals({});
 
   const { data: verifiedMoats, isLoading: isLoadingMoats } = useQuery<VerifiedMoat[]>({
     queryKey: ["verified-moats"],
@@ -176,8 +183,75 @@ export default function Admin() {
   });
 
   const createProposal = useCreateProposal();
+  const updateProposal = useUpdateProposal();
+  const deleteProposal = useDeleteProposal();
   const addAdmin = useAddAdmin();
   const removeAdmin = useRemoveAdmin();
+
+  // Submitted proposals (created by the connected admin)
+  const myProposals = React.useMemo(() => {
+    if (!address || !allProposals) return [];
+    return allProposals.filter(p => p.createdBy?.toLowerCase() === address.toLowerCase());
+  }, [allProposals, address]);
+
+  const [editProposal, setEditProposal] = React.useState<Proposal | null>(null);
+  const [editTitle, setEditTitle] = React.useState("");
+  const [editDesc, setEditDesc] = React.useState("");
+  const [editEnd, setEditEnd] = React.useState("");
+
+  const toLocalInput = (iso: string) => {
+    const d = new Date(iso);
+    const off = d.getTimezoneOffset();
+    return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+  };
+
+  const openEdit = (p: Proposal) => {
+    setEditProposal(p);
+    setEditTitle(p.title);
+    setEditDesc(p.description ?? "");
+    setEditEnd(toLocalInput(p.endDate));
+  };
+
+  const handleUpdateProposal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProposal) return;
+    updateProposal.mutate({
+      id: editProposal.id,
+      data: {
+        title: editTitle,
+        description: editDesc,
+        endDate: new Date(editEnd).toISOString(),
+      },
+    }, {
+      onSuccess: () => {
+        toast({ title: "Proposal updated" });
+        setEditProposal(null);
+        queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
+      },
+      onError: (err: any) => toast({ title: "Error updating proposal", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleDeleteProposal = (p: Proposal) => {
+    if (!confirm(`Delete proposal "${p.title}"? This will cancel it permanently.`)) return;
+    deleteProposal.mutate({ id: p.id }, {
+      onSuccess: () => {
+        toast({ title: "Proposal deleted" });
+        queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
+      },
+      onError: (err: any) => toast({ title: "Error deleting proposal", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const statusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "active": return "default";
+      case "passed": return "secondary";
+      case "failed":
+      case "cancelled": return "destructive";
+      default: return "outline";
+    }
+  };
 
   // Proposal form state
   const [propMoatAddr, setPropMoatAddr] = React.useState("");
@@ -297,6 +371,7 @@ export default function Admin() {
         <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none h-12 p-0 space-x-6 mb-8">
           <TabsTrigger value="proposals" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Create Proposal</TabsTrigger>
           <TabsTrigger value="admins" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Manage Admins</TabsTrigger>
+          <TabsTrigger value="submitted" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Submitted Proposals</TabsTrigger>
         </TabsList>
 
         {/* ── Create Proposal ─────────────────────────────────────────────── */}
@@ -606,7 +681,119 @@ export default function Admin() {
             </Card>
           </div>
         </TabsContent>
+
+        {/* ── Submitted Proposals ──────────────────────────────────────────── */}
+        <TabsContent value="submitted">
+          <Card className="bg-card">
+            <CardHeader>
+              <CardTitle>Submitted Proposals</CardTitle>
+              <CardDescription>
+                Proposals you submitted from this wallet. Edit details or delete (cancel) them.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!address ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
+                  <Info size={28} className="opacity-50" />
+                  <p>Connect your wallet to view the proposals you submitted.</p>
+                </div>
+              ) : isLoadingProposals ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : myProposals.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
+                  <FileText size={28} className="opacity-50" />
+                  <p>You haven't submitted any proposals yet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border">
+                      <TableHead>Title</TableHead>
+                      <TableHead>Project</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ends</TableHead>
+                      <TableHead className="text-right">Votes</TableHead>
+                      <TableHead className="w-28 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {myProposals.map((p) => (
+                      <TableRow key={p.id} className="border-border/50">
+                        <TableCell className="font-medium max-w-[220px] truncate">{p.title}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.projectName}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant(p.status)} className="capitalize">{p.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {new Date(p.endDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{p.totalVotes ?? 0}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                              onClick={() => openEdit(p)}
+                              aria-label={`Edit ${p.title}`}
+                            >
+                              <Pencil size={15} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              onClick={() => handleDeleteProposal(p)}
+                              disabled={deleteProposal.isPending || p.status === "cancelled"}
+                              aria-label={`Delete ${p.title}`}
+                            >
+                              <Trash2 size={15} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* ── Edit Proposal Dialog ───────────────────────────────────────────── */}
+      <Dialog open={!!editProposal} onOpenChange={(open) => { if (!open) setEditProposal(null); }}>
+        <DialogContent className="bg-card">
+          <DialogHeader>
+            <DialogTitle>Edit Proposal</DialogTitle>
+            <DialogDescription>Update the title, description, or end date of your proposal.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProposal} className="space-y-5">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required className="bg-background" />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} required className="bg-background min-h-[120px]" />
+            </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input type="datetime-local" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} required className="bg-background" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditProposal(null)}>Cancel</Button>
+              <Button type="submit" disabled={updateProposal.isPending}>
+                {updateProposal.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

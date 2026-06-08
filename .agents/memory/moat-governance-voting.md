@@ -69,3 +69,13 @@ deep-equal the submitted allocation.
 to a different allocation than what gets stored (extra/missing/overlapping lines).
 **How to apply:** if the client weighted-vote message format in `proposal-detail.tsx`
 changes, update this parser in lockstep or all weighted votes 400.
+
+## Admin endpoints have NO server-side auth (app-wide)
+Proposal create/update/delete and admin add/remove accept any caller — `createdBy`
+is whatever the client sends; there is no session/signature gate on admin routes.
+Only **votes** are signature-verified. The Admin page's "Submitted Proposals" tab
+filters by `createdBy === connected wallet` purely client-side for display/UX.
+**Why:** the app has no auth system tying HTTP requests to a wallet identity.
+**How to apply:** any "only the owner can do X" admin feature is display-only until a
+signature/session auth layer is added across ALL admin routes — don't bolt authz onto
+one endpoint in isolation (inconsistent + still bypassable elsewhere).
