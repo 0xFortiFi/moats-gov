@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "gNOcmRSGKZBAMMT7Hd2vq"
+uri = "file://sdk/moats-governance-sdk.tar.gz"
+type = "unspecified"
+title = "moats-governance-sdk.ts"
