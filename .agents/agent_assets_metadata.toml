@@ -36,3 +36,9 @@ id = "YIYeQ0xDP52CQBh1CWEiE"
 uri = "file://sdk/moats-governance-readmes.zip"
 type = "unspecified"
 title = "moats-governance-readmes.zip"
+
+[[outputs]]
+id = "uy04i9ncBM-rVF0BEkBwm"
+uri = "file://sdk/moats-governance-readme.zip"
+type = "unspecified"
+title = "moats-governance-readme.zip"
