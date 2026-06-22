@@ -30,3 +30,9 @@ id = "GdETVDM5y2fnW9Pp3pGEA"
 uri = "file://sdk/MOATS-GOVERNANCE-UI-TEMPLATE-README.md"
 type = "text"
 title = "Moats Governance UI Template — README.md"
+
+[[outputs]]
+id = "YIYeQ0xDP52CQBh1CWEiE"
+uri = "file://sdk/moats-governance-readmes.zip"
+type = "unspecified"
+title = "moats-governance-readmes.zip"
