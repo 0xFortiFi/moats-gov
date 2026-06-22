@@ -34,13 +34,6 @@ export default function Projects() {
                 <CardContent className="p-6 flex flex-col h-full">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      {project.logoUrl ? (
-                        <img src={project.logoUrl} alt={project.name} className="w-10 h-10 rounded-full border border-border bg-card" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full border border-border bg-muted flex items-center justify-center text-muted-foreground">
-                          {project.name.charAt(0)}
-                        </div>
-                      )}
                       <div>
                         <h3 className="font-bold text-lg group-hover:text-primary transition-colors">{project.name}</h3>
                       </div>

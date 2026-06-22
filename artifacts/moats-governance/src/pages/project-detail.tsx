@@ -37,13 +37,6 @@ export default function ProjectDetail() {
     <div className="space-y-8 animate-in fade-in zoom-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex items-center gap-6">
-          {project.logoUrl ? (
-            <img src={project.logoUrl} alt={project.name} className="w-20 h-20 rounded-xl border border-primary/20 bg-card object-cover" />
-          ) : (
-            <div className="w-20 h-20 rounded-xl border border-primary/20 bg-muted flex items-center justify-center text-3xl font-bold text-muted-foreground">
-              {project.name.charAt(0)}
-            </div>
-          )}
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2">{project.name}</h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono">
