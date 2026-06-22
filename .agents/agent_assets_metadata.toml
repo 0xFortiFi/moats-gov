@@ -12,3 +12,9 @@ id = "UiCncI0H7hK0Nf3ms7tmc"
 uri = "file://sdk/moats-governance-sdk.zip"
 type = "unspecified"
 title = "moats-governance-sdk.zip"
+
+[[outputs]]
+id = "h11uikCIj0iPmBtc8-TJf"
+uri = "file://sdk/moats-governance-ui-template.zip"
+type = "unspecified"
+title = "moats-governance-ui-template.zip"

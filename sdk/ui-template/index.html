@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moats Governance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <a class="header-brand" href="#" onclick="showView('dashboard');return false;">
+      <div class="brand-dot"></div>
+      <span>Moats <span class="accent">Governance</span></span>
+    </a>
+
+    <nav class="header-nav">
+      <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+      <button class="nav-btn" data-view="projects">Projects</button>
+      <button class="nav-btn" data-view="proposals">Proposals</button>
+      <button class="nav-btn" data-view="moats">Verified Moats</button>
+    </nav>
+
+    <div class="header-right">
+      <button class="wallet-badge" id="wallet-btn">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- ── Main ────────────────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Config bar -->
+    <div class="config-bar">
+      <label>API URL</label>
+      <input id="config-url" type="url" placeholder="https://your-app.replit.app" />
+      <button class="btn btn-primary btn-sm" id="apply-config">Connect</button>
+    </div>
+
+    <!-- ── Dashboard ─────────────────────────────────────────────────────── -->
+    <div class="view active" id="view-dashboard">
+      <div class="section-header">
+        <h1>Dashboard</h1>
+        <p>Overview of governance activity across all Moats.</p>
+      </div>
+
+      <div class="grid-4" id="dash-stats" style="margin-bottom:2rem">
+        <div class="stat-card"><div class="stat-label">Total Proposals</div><div class="stat-value">—</div></div>
+        <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value">—</div></div>
+        <div class="stat-card"><div class="stat-label">Passed</div><div class="stat-value">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value">—</div></div>
+      </div>
+
+      <div class="section-header" style="margin-bottom:1.25rem">
+        <h1 style="font-size:1.1rem">Recent Proposals</h1>
+      </div>
+      <div id="dash-recent">
+        <div class="empty"><div class="empty-icon">◎</div><p>Connect to your API to load data.</p></div>
+      </div>
+    </div>
+
+    <!-- ── Projects ──────────────────────────────────────────────────────── -->
+    <div class="view" id="view-projects">
+      <div class="section-header">
+        <h1>Projects</h1>
+        <p>Protocols and organisations governed by Moat Points.</p>
+      </div>
+      <div class="grid-2" id="projects-list">
+        <div class="empty"><div class="empty-icon">◎</div><p>Connect to your API to load data.</p></div>
+      </div>
+    </div>
+
+    <!-- ── Proposals ─────────────────────────────────────────────────────── -->
+    <div class="view" id="view-proposals">
+      <div class="section-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div>
+          <h1>Proposals</h1>
+          <p>Browse and vote on active governance proposals.</p>
+        </div>
+        <button class="btn btn-primary" id="create-proposal-btn">+ Create Proposal</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn filter-tab active" data-filter="all">All</button>
+        <button class="tab-btn filter-tab" data-filter="active">Active</button>
+        <button class="tab-btn filter-tab" data-filter="pending">Pending</button>
+        <button class="tab-btn filter-tab" data-filter="passed">Passed</button>
+        <button class="tab-btn filter-tab" data-filter="failed">Failed</button>
+      </div>
+
+      <div id="proposals-list">
+        <div class="empty"><div class="empty-icon">◎</div><p>Connect to your API to load data.</p></div>
+      </div>
+    </div>
+
+    <!-- ── Proposal Detail (injected view) ───────────────────────────────── -->
+    <div class="view" id="view-proposal-detail">
+      <div id="proposal-detail-content">
+        <div class="loading"><div class="spinner"></div> Loading…</div>
+      </div>
+    </div>
+
+    <!-- ── Verified Moats ─────────────────────────────────────────────────── -->
+    <div class="view" id="view-moats">
+      <div class="section-header">
+        <h1>Verified Moats</h1>
+        <p>All Moats verified by the Moats protocol (updated every 10 minutes).</p>
+      </div>
+      <div class="grid-2" id="moats-list">
+        <div class="empty"><div class="empty-icon">◎</div><p>Connect to your API to load data.</p></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Toast container ─────────────────────────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
