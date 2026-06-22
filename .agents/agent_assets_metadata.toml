@@ -18,3 +18,15 @@ id = "h11uikCIj0iPmBtc8-TJf"
 uri = "file://sdk/moats-governance-ui-template.zip"
 type = "unspecified"
 title = "moats-governance-ui-template.zip"
+
+[[outputs]]
+id = "9NO0oPQWIDXtPaQtF6mhE"
+uri = "file://sdk/MOATS-GOVERNANCE-SDK-README.md"
+type = "text"
+title = "Moats Governance SDK — README.md"
+
+[[outputs]]
+id = "GdETVDM5y2fnW9Pp3pGEA"
+uri = "file://sdk/MOATS-GOVERNANCE-UI-TEMPLATE-README.md"
+type = "text"
+title = "Moats Governance UI Template — README.md"
