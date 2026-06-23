@@ -42,3 +42,9 @@ id = "uy04i9ncBM-rVF0BEkBwm"
 uri = "file://sdk/moats-governance-readme.zip"
 type = "unspecified"
 title = "moats-governance-readme.zip"
+
+[[outputs]]
+id = "g8toy0Qola9zB25QcgEJJ"
+uri = "file://sdk/moats-governance-gitbook.zip"
+type = "unspecified"
+title = "moats-governance-gitbook.zip"
