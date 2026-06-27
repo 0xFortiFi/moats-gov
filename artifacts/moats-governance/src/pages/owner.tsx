@@ -63,7 +63,7 @@ export default function Owner() {
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {projects?.map(p => (
                       <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                     ))}
