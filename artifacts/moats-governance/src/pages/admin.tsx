@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   useListProjects,
   useListProposals,
+  useListAdmins,
   useCreateProposal,
   useUpdateProposal,
   useDeleteProposal,
@@ -19,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle2, Info, Pencil, FileText } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Info, Pencil, FileText, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -167,6 +168,25 @@ export default function Admin() {
 
   const { data: projects, isLoading: isLoadingProjects } = useListProjects();
   const { data: allProposals, isLoading: isLoadingProposals } = useListProposals({});
+  const { data: allAdmins, isLoading: isLoadingAdmins } = useListAdmins({});
+
+  // Derive which projects the connected wallet is admin for
+  const adminProjectIds = React.useMemo(() => {
+    if (!address || !allAdmins) return new Set<number>();
+    return new Set(
+      allAdmins
+        .filter(a => a.walletAddress.toLowerCase() === address.toLowerCase())
+        .map(a => a.projectId)
+    );
+  }, [allAdmins, address]);
+
+  const isAdmin = adminProjectIds.size > 0;
+
+  // Only show verified moats whose project this wallet is admin for
+  const adminProjects = React.useMemo(() => {
+    if (!projects) return [];
+    return projects.filter(p => adminProjectIds.has(p.id));
+  }, [projects, adminProjectIds]);
 
   const { data: verifiedMoats, isLoading: isLoadingMoats } = useQuery<VerifiedMoat[]>({
     queryKey: ["verified-moats"],
@@ -336,6 +356,42 @@ export default function Admin() {
     }
   };
 
+  // ── Access gate ────────────────────────────────────────────────────────────
+  if (!address) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center max-w-md mx-auto animate-in fade-in duration-500">
+        <div className="p-4 rounded-full bg-primary/10 border border-primary/20">
+          <Shield size={32} className="text-primary" />
+        </div>
+        <h2 className="text-xl font-bold">Connect Your Wallet</h2>
+        <p className="text-muted-foreground text-sm">Connect your wallet to check your admin access.</p>
+      </div>
+    );
+  }
+
+  if (isLoadingAdmins) {
+    return (
+      <div className="space-y-4 max-w-5xl mx-auto">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center max-w-md mx-auto animate-in fade-in duration-500">
+        <div className="p-4 rounded-full bg-red-500/10 border border-red-500/20">
+          <Shield size={32} className="text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold">Access Restricted</h2>
+        <p className="text-muted-foreground text-sm">
+          Your wallet <span className="font-mono text-foreground">{address.slice(0,6)}…{address.slice(-4)}</span> has not been granted admin access. Contact the owner to be added as an administrator.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in zoom-in duration-500 max-w-5xl mx-auto">
       <div>
@@ -370,16 +426,20 @@ export default function Admin() {
                         <SelectValue placeholder="Select a verified Moat..." />
                       </SelectTrigger>
                       <SelectContent className="max-h-72 overflow-y-auto">
-                        {verifiedMoats?.map(m => (
-                          <SelectItem key={m.contractAddress} value={m.contractAddress}>
-                            <div className="flex flex-col gap-0.5 py-0.5">
-                              <span className="font-medium text-sm">{m.name}</span>
-                              <span className="font-mono text-[11px] text-muted-foreground">
-                                {m.contractAddress.slice(0, 6)}...{m.contractAddress.slice(-4)}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {verifiedMoats
+                          ?.filter(m => adminProjects.some(
+                            p => p.contractAddress.toLowerCase() === m.contractAddress.toLowerCase()
+                          ))
+                          .map(m => (
+                            <SelectItem key={m.contractAddress} value={m.contractAddress}>
+                              <div className="flex flex-col gap-0.5 py-0.5">
+                                <span className="font-medium text-sm">{m.name}</span>
+                                <span className="font-mono text-[11px] text-muted-foreground">
+                                  {m.contractAddress.slice(0, 6)}...{m.contractAddress.slice(-4)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   )}

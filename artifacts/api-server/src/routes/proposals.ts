@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { proposalsTable, projectsTable } from "@workspace/db";
+import { proposalsTable, projectsTable, adminsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
   CreateProposalBody,
@@ -9,6 +9,13 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+const OWNER_ADDRESS = process.env.OWNER_ADDRESS?.toLowerCase() ?? null;
+
+function isOwner(address: string | undefined): boolean {
+  if (!OWNER_ADDRESS || !address) return false;
+  return address.toLowerCase() === OWNER_ADDRESS;
+}
 
 router.get("/proposals/summary", async (req, res) => {
   try {
@@ -98,8 +105,25 @@ router.post("/proposals", async (req, res) => {
       return;
     }
 
-    // Custom options only apply to non-basic voting methods. Basic uses the
-    // fixed FOR / AGAINST / ABSTAIN choices and stores no options.
+    // ── Authorization: creator must be an admin for this project OR the owner ──
+    const callerAddress = parsed.data.createdBy?.toLowerCase();
+    if (!isOwner(callerAddress)) {
+      const adminRows = await db
+        .select()
+        .from(adminsTable)
+        .where(
+          and(
+            eq(adminsTable.projectId, parsed.data.projectId),
+            eq(adminsTable.walletAddress, callerAddress ?? "")
+          )
+        );
+      if (adminRows.length === 0) {
+        res.status(403).json({ error: "Your wallet is not authorized to create proposals for this project." });
+        return;
+      }
+    }
+
+    // Custom options only apply to non-basic voting methods.
     let options: string[] | null = null;
     if (parsed.data.votingMethod !== "basic") {
       const cleaned = (parsed.data.options ?? [])
@@ -115,8 +139,6 @@ router.post("/proposals", async (req, res) => {
         res.status(400).json({ error: "A maximum of 10 options is allowed" });
         return;
       }
-      // Reject duplicate options (case-insensitive) — tallies are keyed by the
-      // exact choice string, so duplicates would split/double-count votes.
       const seen = new Set<string>();
       for (const o of cleaned) {
         const key = o.toLowerCase();
@@ -147,7 +169,6 @@ router.post("/proposals", async (req, res) => {
       })
       .returning();
 
-    // Update project totals
     await db
       .update(projectsTable)
       .set({ totalProposals: project.totalProposals + 1 })
@@ -252,6 +273,14 @@ router.patch("/proposals/:id", async (req, res) => {
       return;
     }
 
+    // ── Authorization: caller must be the creator OR the owner ──
+    const callerAddress = (req.headers["x-wallet-address"] as string | undefined)?.toLowerCase();
+    const createdBy = rows[0].proposals.createdBy?.toLowerCase();
+    if (callerAddress && !isOwner(callerAddress) && callerAddress !== createdBy) {
+      res.status(403).json({ error: "Not authorized to edit this proposal." });
+      return;
+    }
+
     const updates: Partial<typeof proposalsTable.$inferSelect> = {};
     if (parsed.data.status) updates.status = parsed.data.status;
     if (parsed.data.title) updates.title = parsed.data.title;
@@ -307,6 +336,14 @@ router.delete("/proposals/:id", async (req, res) => {
 
     if (rows.length === 0) {
       res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    // ── Authorization: caller must be the creator OR the owner ──
+    const callerAddress = (req.headers["x-wallet-address"] as string | undefined)?.toLowerCase();
+    const createdBy = rows[0].proposals.createdBy?.toLowerCase();
+    if (callerAddress && !isOwner(callerAddress) && callerAddress !== createdBy) {
+      res.status(403).json({ error: "Not authorized to delete this proposal." });
       return;
     }
 

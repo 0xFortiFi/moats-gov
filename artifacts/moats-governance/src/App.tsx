@@ -1,4 +1,4 @@
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, useAccount } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { wagmiAdapter } from "@/lib/wallet";
@@ -13,12 +13,23 @@ import ProposalDetail from "@/pages/proposal-detail";
 import Admin from "@/pages/admin";
 import Owner from "@/pages/owner";
 import NotFound from "@/pages/not-found";
+import { setWalletAddress } from "@workspace/api-client-react";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
+
+function WalletSync() {
+  const { address } = useAccount();
+  useEffect(() => {
+    setWalletAddress(address ?? null);
+  }, [address]);
+  return null;
+}
 
 function Router() {
   return (
     <Layout>
+      <WalletSync />
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/projects" component={Projects} />

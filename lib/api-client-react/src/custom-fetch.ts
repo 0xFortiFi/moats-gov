@@ -17,6 +17,17 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _walletAddress: string | null = null;
+
+/**
+ * Register the currently connected wallet address.  It will be forwarded as
+ * the `x-wallet-address` request header on every API call so the server can
+ * perform lightweight identity checks (e.g. admin-only mutations).
+ * Pass `null` to clear the address when the wallet disconnects.
+ */
+export function setWalletAddress(address: string | null): void {
+  _walletAddress = address;
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -356,6 +367,11 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+
+  // Forward the connected wallet address so the API can perform identity checks.
+  if (_walletAddress && !headers.has("x-wallet-address")) {
+    headers.set("x-wallet-address", _walletAddress);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
