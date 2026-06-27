@@ -347,6 +347,41 @@ router.delete("/proposals/:id", async (req, res) => {
       return;
     }
 
+    const alreadyCancelled = rows[0].proposals.status === "cancelled";
+
+    // Hard-delete if already cancelled (owner removing it permanently),
+    // otherwise soft-cancel by setting status to "cancelled".
+    if (alreadyCancelled) {
+      const [deleted] = await db
+        .delete(proposalsTable)
+        .where(eq(proposalsTable.id, id))
+        .returning();
+
+      const { projects } = rows[0];
+      res.json({
+        id: deleted.id,
+        title: deleted.title,
+        description: deleted.description,
+        projectId: deleted.projectId,
+        projectName: projects.name,
+        status: "removed",
+        createdBy: deleted.createdBy,
+        quorumType: deleted.quorumType,
+        quorumThreshold: deleted.quorumThreshold,
+        approvalThreshold: deleted.approvalThreshold,
+        votingMethod: deleted.votingMethod,
+        options: deleted.options,
+        startDate: deleted.startDate.toISOString(),
+        endDate: deleted.endDate.toISOString(),
+        createdAt: deleted.createdAt.toISOString(),
+        votesFor: deleted.votesFor,
+        votesAgainst: deleted.votesAgainst,
+        votesAbstain: deleted.votesAbstain,
+        totalVotes: deleted.totalVotes,
+      });
+      return;
+    }
+
     const [deleted] = await db
       .update(proposalsTable)
       .set({ status: "cancelled" })

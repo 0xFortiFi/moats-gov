@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, FileText, Activity } from "lucide-react";
+import { Plus, Trash2, Pencil, FileText, Activity, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -92,11 +92,22 @@ export default function Owner() {
     });
   };
 
-  const handleDeleteProposal = (p: Proposal) => {
-    if (!confirm(`Cancel proposal "${p.title}"? This cannot be undone.`)) return;
+  const handleCancelProposal = (p: Proposal) => {
+    if (!confirm(`Cancel proposal "${p.title}"? This will mark it as cancelled.`)) return;
     deleteProposal.mutate({ id: p.id }, {
       onSuccess: () => {
         toast({ title: "Proposal cancelled" });
+        queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
+      },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleRemoveProposal = (p: Proposal) => {
+    if (!confirm(`Permanently remove "${p.title}"? This will delete it from the database and cannot be undone.`)) return;
+    deleteProposal.mutate({ id: p.id }, {
+      onSuccess: () => {
+        toast({ title: "Proposal removed" });
         queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
       },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -258,16 +269,31 @@ export default function Owner() {
                             >
                               <Pencil size={15} />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                              onClick={() => handleDeleteProposal(p)}
-                              disabled={deleteProposal.isPending || p.status === "cancelled"}
-                              aria-label={`Cancel ${p.title}`}
-                            >
-                              <Trash2 size={15} />
-                            </Button>
+                            {p.status === "cancelled" ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-600/10"
+                                onClick={() => handleRemoveProposal(p)}
+                                disabled={deleteProposal.isPending}
+                                title="Permanently remove this proposal"
+                                aria-label={`Remove ${p.title}`}
+                              >
+                                <X size={15} />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                onClick={() => handleCancelProposal(p)}
+                                disabled={deleteProposal.isPending}
+                                title="Cancel this proposal"
+                                aria-label={`Cancel ${p.title}`}
+                              >
+                                <Trash2 size={15} />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
