@@ -27,63 +27,63 @@ export default function Dashboard() {
   const { data: activeProposals, isLoading: isLoadingProposals } = useListProposals({ status: "active" });
 
   return (
-    <div className="space-y-8 animate-in fade-in zoom-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in zoom-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Command Center</h1>
-        <p className="text-muted-foreground">Platform-wide governance overview and active operations.</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1 md:mb-2">Command Center</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Platform-wide governance overview and active operations.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <Card className="bg-card border-card-border overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <FileText size={48} />
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <FileText size={36} />
           </div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Proposals</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total Proposals</CardTitle>
           </CardHeader>
-          <CardContent>
-            {isLoadingSummary ? <Skeleton className="h-8 w-20" /> : <div className="text-3xl font-bold">{summary?.total || 0}</div>}
+          <CardContent className="p-3 md:p-4 pt-0">
+            {isLoadingSummary ? <Skeleton className="h-7 w-16" /> : <div className="text-2xl md:text-3xl font-bold">{summary?.total || 0}</div>}
           </CardContent>
         </Card>
         <Card className="bg-card border-card-border overflow-hidden relative border-l-4 border-l-primary">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-primary">
-            <Activity size={48} />
+          <div className="absolute top-0 right-0 p-3 opacity-10 text-primary">
+            <Activity size={36} />
           </div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Operations</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Active</CardTitle>
           </CardHeader>
-          <CardContent>
-            {isLoadingSummary ? <Skeleton className="h-8 w-20" /> : <div className="text-3xl font-bold text-primary">{summary?.active || 0}</div>}
+          <CardContent className="p-3 md:p-4 pt-0">
+            {isLoadingSummary ? <Skeleton className="h-7 w-16" /> : <div className="text-2xl md:text-3xl font-bold text-primary">{summary?.active || 0}</div>}
           </CardContent>
         </Card>
         <Card className="bg-card border-card-border overflow-hidden relative border-l-4 border-l-green-500/50">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-green-500">
-            <CheckCircle2 size={48} />
+          <div className="absolute top-0 right-0 p-3 opacity-10 text-green-500">
+            <CheckCircle2 size={36} />
           </div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Passed</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Passed</CardTitle>
           </CardHeader>
-          <CardContent>
-            {isLoadingSummary ? <Skeleton className="h-8 w-20" /> : <div className="text-3xl font-bold">{summary?.passed || 0}</div>}
+          <CardContent className="p-3 md:p-4 pt-0">
+            {isLoadingSummary ? <Skeleton className="h-7 w-16" /> : <div className="text-2xl md:text-3xl font-bold">{summary?.passed || 0}</div>}
           </CardContent>
         </Card>
         <Card className="bg-card border-card-border overflow-hidden relative border-l-4 border-l-red-500/50">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-red-500">
-            <XCircle size={48} />
+          <div className="absolute top-0 right-0 p-3 opacity-10 text-red-500">
+            <XCircle size={36} />
           </div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Failed</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Failed</CardTitle>
           </CardHeader>
-          <CardContent>
-            {isLoadingSummary ? <Skeleton className="h-8 w-20" /> : <div className="text-3xl font-bold">{summary?.failed || 0}</div>}
+          <CardContent className="p-3 md:p-4 pt-0">
+            {isLoadingSummary ? <Skeleton className="h-7 w-16" /> : <div className="text-2xl md:text-3xl font-bold">{summary?.failed || 0}</div>}
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-5 md:gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight">Active Proposals</h2>
+            <h2 className="text-lg md:text-xl font-bold tracking-tight">Active Proposals</h2>
             <Link href="/proposals" className="text-sm text-primary hover:underline">View all</Link>
           </div>
           

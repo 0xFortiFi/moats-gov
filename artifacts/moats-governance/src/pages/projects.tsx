@@ -9,10 +9,10 @@ export default function Projects() {
   const { data: projects, isLoading } = useListProjects();
 
   return (
-    <div className="space-y-8 animate-in fade-in zoom-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in zoom-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Governance Projects</h1>
-        <p className="text-muted-foreground">Protocols and organizations governed by Moat Points.</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1 md:mb-2">Governance Projects</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Protocols and organizations governed by Moat Points.</p>
       </div>
 
       {isLoading ? (

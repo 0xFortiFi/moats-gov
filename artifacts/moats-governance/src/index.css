@@ -108,3 +108,22 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Safe area insets for bottom nav on notched devices */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Landscape mobile: compact header and reduce vertical rhythm */
+@media (max-width: 767px) and (orientation: landscape) {
+  header {
+    height: 3rem !important;
+  }
+  main {
+    padding-top: 0.75rem !important;
+    padding-bottom: 4.5rem !important;
+  }
+  nav.fixed.bottom-0 {
+    height: 3.25rem !important;
+  }
+}
