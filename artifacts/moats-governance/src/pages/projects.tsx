@@ -1,73 +1,142 @@
 import { useListProjects } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { BoxSelect, Activity, ArrowRight, ExternalLink } from "lucide-react";
+import { BoxSelect, Activity, ArrowUpRight, ExternalLink, FolderOpen } from "lucide-react";
+import { motion } from "framer-motion";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.22,1,0.36,1] } },
+};
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
 
 export default function Projects() {
   const { data: projects, isLoading } = useListProjects();
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in zoom-in duration-500">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1 md:mb-2">Governance Projects</h1>
-        <p className="text-sm md:text-base text-muted-foreground">Protocols and organizations governed by Moat Points.</p>
-      </div>
+    <div className="space-y-7 md:space-y-9 max-w-6xl mx-auto">
+
+      {/* ── Header ───────────────────────────────────────────────────────── */}
+      <motion.div variants={fadeUp} initial="initial" animate="animate">
+        <div className="flex items-start gap-3 mb-1">
+          <div
+            className="mt-1 p-1.5 rounded-lg shrink-0"
+            style={{ background: "rgba(212,147,26,0.12)", border: "1px solid rgba(212,147,26,0.2)" }}
+          >
+            <FolderOpen size={16} className="text-amber-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Governance Projects</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-0.5">
+              Protocols and organizations governed by Moat Points.
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-48 w-full" />)}
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-52 w-full rounded-xl" />)}
         </div>
       ) : projects?.length === 0 ? (
-        <Card className="border-dashed bg-transparent">
-          <CardContent className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <BoxSelect size={48} className="mb-4 opacity-50" />
-            <p>No projects registered yet.</p>
-          </CardContent>
-        </Card>
+        <motion.div variants={fadeUp} initial="initial" animate="animate">
+          <div
+            className="rounded-xl border border-dashed border-border/50 flex flex-col items-center justify-center h-64 text-muted-foreground"
+          >
+            <BoxSelect size={36} className="mb-3 opacity-25" />
+            <p className="text-sm font-medium">No projects registered yet.</p>
+          </div>
+        </motion.div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects?.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
-              <Card className="h-full transition-all hover:border-primary/50 group cursor-pointer hover:shadow-lg hover:shadow-primary/5">
-                <CardContent className="p-6 flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <h3 className="font-bold text-lg group-hover:text-primary transition-colors">{project.name}</h3>
-                      </div>
+        <motion.div
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+          variants={stagger}
+          initial="initial"
+          animate="animate"
+        >
+          {projects?.map(project => (
+            <motion.div key={project.id} variants={fadeUp}>
+              <Link href={`/projects/${project.id}`} className="block h-full group">
+                <div
+                  className="h-full rounded-xl p-5 flex flex-col card-hover-glow cursor-pointer relative overflow-hidden"
+                  style={{
+                    background: "rgba(11,26,50,0.82)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  {/* Subtle corner glow on hover */}
+                  <div
+                    className="absolute top-0 right-0 w-24 h-24 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500"
+                    style={{ background: "radial-gradient(circle at top right, rgba(212,147,26,0.08), transparent 70%)" }}
+                  />
+
+                  {/* Header row */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "rgba(212,147,26,0.1)", border: "1px solid rgba(212,147,26,0.18)" }}
+                    >
+                      <span className="text-sm font-bold gold-text">{project.name.charAt(0)}</span>
                     </div>
-                    <ArrowRight className="text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0" size={20} />
+                    <ArrowUpRight
+                      size={16}
+                      className="text-muted-foreground/30 group-hover:text-primary transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                    />
                   </div>
 
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-6 flex-1">
+                  {/* Name + description */}
+                  <h3 className="font-bold text-base md:text-lg mb-1.5 group-hover:text-amber-300 transition-colors leading-snug">
+                    {project.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-5 flex-1 leading-relaxed">
                     {project.description || "No description provided."}
                   </p>
 
-                  <div className="space-y-4 mt-auto">
+                  {/* Stats */}
+                  <div
+                    className="space-y-2.5 pt-4"
+                    style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                  >
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-1"><Activity size={14} /> Total Proposals</span>
-                      <span className="font-mono font-medium">{project.totalProposals || 0}</span>
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Activity size={13} strokeWidth={1.8} />
+                        Total Proposals
+                      </span>
+                      <span className="font-mono font-semibold">{project.totalProposals || 0}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Active</span>
-                      <span className="font-mono font-medium">{project.activeProposals || 0}</span>
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: "#D4931A", boxShadow: "0 0 5px rgba(212,147,26,0.5)" }}
+                        />
+                        Active Now
+                      </span>
+                      <span
+                        className="font-mono font-semibold"
+                        style={{ color: project.activeProposals ? "#D4931A" : undefined }}
+                      >
+                        {project.activeProposals || 0}
+                      </span>
                     </div>
-
-                    <div className="pt-4 border-t border-border flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Contract</span>
-                      <div className="flex items-center gap-1 text-xs font-mono bg-muted px-2 py-1 rounded">
-                        {project.contractAddress.slice(0, 6)}...{project.contractAddress.slice(-4)}
-                        <ExternalLink size={12} className="opacity-50" />
+                      <div
+                        className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-md"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.06)" }}
+                      >
+                        {project.contractAddress.slice(0, 6)}…{project.contractAddress.slice(-4)}
+                        <ExternalLink size={10} className="opacity-40" />
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

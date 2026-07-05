@@ -13,7 +13,6 @@ import {
   Proposal,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { motion } from "framer-motion";
 
 type VerifiedMoat = {
   contractAddress: string;
@@ -35,7 +35,6 @@ type VerifiedMoat = {
   tags: Array<{ name: string; color: string }>;
 };
 
-// ── Quorum type metadata ───────────────────────────────────────────────────────
 const QUORUM_TYPES: Array<{
   value: QuorumType;
   label: string;
@@ -45,121 +44,61 @@ const QUORUM_TYPES: Array<{
   hasApprovalThreshold: boolean;
   thresholdUnit: "%" | "tokens";
 }> = [
-  {
-    value: "participation",
-    label: "Participation",
-    description: "All votes count toward quorum: FOR + AGAINST + ABSTAIN",
-    group: "Participation-Based",
-    thresholdLabel: "Min. Participation",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "approval",
-    label: "Approval Only",
-    description: "Only FOR votes count — a minimum level of active support is required",
-    group: "Participation-Based",
-    thresholdLabel: "Min. FOR Votes",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "for_abstain",
-    label: "For + Abstain",
-    description: "FOR and ABSTAIN votes count — neutral participation is recognised",
-    group: "Participation-Based",
-    thresholdLabel: "Min. FOR + ABSTAIN",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "percentage",
-    label: "Percentage-Based",
-    description: "A % of total eligible voting power must participate",
-    group: "Threshold-Based",
-    thresholdLabel: "Participation %",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "fixed_token",
-    label: "Fixed Token",
-    description: "A fixed amount of voting power (tokens) must participate",
-    group: "Threshold-Based",
-    thresholdLabel: "Min. Voting Power (tokens)",
-    hasApprovalThreshold: false,
-    thresholdUnit: "tokens",
-  },
-  {
-    value: "dual",
-    label: "Dual Quorum",
-    description: "Requires both a participation minimum AND a minimum approval percentage",
-    group: "Threshold-Based",
-    thresholdLabel: "Participation %",
-    hasApprovalThreshold: true,
-    thresholdUnit: "%",
-  },
-  {
-    value: "veto",
-    label: "Veto",
-    description: "Proposal passes by default unless opposition reaches the threshold",
-    group: "Threshold-Based",
-    thresholdLabel: "Veto Threshold",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "dynamic",
-    label: "Dynamic",
-    description: "Quorum adjusts automatically based on average historical participation × multiplier",
-    group: "Adaptive",
-    thresholdLabel: "Multiplier %",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "time_weighted",
-    label: "Time-Weighted",
-    description: "Quorum requirement changes over the voting period (starts high, decreases)",
-    group: "Adaptive",
-    thresholdLabel: "Initial Quorum %",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "tiered",
-    label: "Tiered",
-    description: "Different proposal types require different quorum levels (set the base %)",
-    group: "Adaptive",
-    thresholdLabel: "Base Quorum %",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
-  {
-    value: "security",
-    label: "Security / Constitutional",
-    description: "Elevated requirements for critical or protocol-level changes",
-    group: "Adaptive",
-    thresholdLabel: "Min. Participation",
-    hasApprovalThreshold: false,
-    thresholdUnit: "%",
-  },
+  { value: "participation",  label: "Participation",          description: "All votes count toward quorum: FOR + AGAINST + ABSTAIN",                                      group: "Participation-Based", thresholdLabel: "Min. Participation",         hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "approval",       label: "Approval Only",          description: "Only FOR votes count — a minimum level of active support is required",                        group: "Participation-Based", thresholdLabel: "Min. FOR Votes",             hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "for_abstain",    label: "For + Abstain",          description: "FOR and ABSTAIN votes count — neutral participation is recognised",                           group: "Participation-Based", thresholdLabel: "Min. FOR + ABSTAIN",         hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "percentage",     label: "Percentage-Based",       description: "A % of total eligible voting power must participate",                                         group: "Threshold-Based",     thresholdLabel: "Participation %",            hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "fixed_token",    label: "Fixed Token",            description: "A fixed amount of voting power (tokens) must participate",                                    group: "Threshold-Based",     thresholdLabel: "Min. Voting Power (tokens)", hasApprovalThreshold: false, thresholdUnit: "tokens" },
+  { value: "dual",           label: "Dual Quorum",            description: "Requires both a participation minimum AND a minimum approval percentage",                     group: "Threshold-Based",     thresholdLabel: "Participation %",            hasApprovalThreshold: true,  thresholdUnit: "%" },
+  { value: "veto",           label: "Veto",                   description: "Proposal passes by default unless opposition reaches the threshold",                          group: "Threshold-Based",     thresholdLabel: "Veto Threshold",             hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "dynamic",        label: "Dynamic",                description: "Quorum adjusts automatically based on average historical participation × multiplier",         group: "Adaptive",            thresholdLabel: "Multiplier %",               hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "time_weighted",  label: "Time-Weighted",          description: "Quorum requirement changes over the voting period (starts high, decreases)",                  group: "Adaptive",            thresholdLabel: "Initial Quorum %",           hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "tiered",         label: "Tiered",                 description: "Different proposal types require different quorum levels (set the base %)",                   group: "Adaptive",            thresholdLabel: "Base Quorum %",              hasApprovalThreshold: false, thresholdUnit: "%" },
+  { value: "security",       label: "Security / Constitutional", description: "Elevated requirements for critical or protocol-level changes",                            group: "Adaptive",            thresholdLabel: "Min. Participation",         hasApprovalThreshold: false, thresholdUnit: "%" },
 ];
 
-const VOTING_METHODS: Array<{
-  value: VotingMethod;
-  label: string;
-  description: string;
-}> = [
-  { value: "basic", label: "Basic (FOR / AGAINST / ABSTAIN)", description: "Standard three-choice vote" },
-  { value: "single_choice", label: "Single Choice", description: "Voters pick exactly one option" },
-  { value: "approval_voting", label: "Approval Voting", description: "Voters may select multiple valid options" },
-  { value: "ranked_choice", label: "Ranked Choice", description: "Voters rank options by preference" },
-  { value: "weighted", label: "Weighted Voting", description: "Voters distribute their voting power across options" },
-  { value: "quadratic", label: "Quadratic Voting", description: "Voting cost increases quadratically, reducing whale dominance" },
+const VOTING_METHODS: Array<{ value: VotingMethod; label: string; description: string }> = [
+  { value: "basic",           label: "Basic (FOR / AGAINST / ABSTAIN)", description: "Standard three-choice vote"                               },
+  { value: "single_choice",   label: "Single Choice",                   description: "Voters pick exactly one option"                           },
+  { value: "approval_voting", label: "Approval Voting",                 description: "Voters may select multiple valid options"                  },
+  { value: "ranked_choice",   label: "Ranked Choice",                   description: "Voters rank options by preference"                        },
+  { value: "weighted",        label: "Weighted Voting",                  description: "Voters distribute their voting power across options"       },
+  { value: "quadratic",       label: "Quadratic Voting",                description: "Voting cost increases quadratically, reducing whale dominance" },
 ];
 
 const QUORUM_GROUPS = ["Participation-Based", "Threshold-Based", "Adaptive"];
+
+const fadeUp = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22,1,0.36,1] } },
+};
+
+function FieldRow({ children }: { children: React.ReactNode }) {
+  return <div className="space-y-1.5">{children}</div>;
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <Label className="text-xs font-medium text-muted-foreground/90">{children}</Label>;
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-5">
+      <div className="section-label">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "active":    return "default";
+    case "passed":    return "secondary";
+    case "failed":
+    case "cancelled": return "destructive";
+    default:          return "outline";
+  }
+}
 
 export default function Admin() {
   const { address } = useAccount();
@@ -170,7 +109,6 @@ export default function Admin() {
   const { data: allProposals, isLoading: isLoadingProposals } = useListProposals({});
   const { data: allAdmins, isLoading: isLoadingAdmins } = useListAdmins({});
 
-  // Derive which projects the connected wallet is admin for
   const adminProjectIds = React.useMemo(() => {
     if (!address || !allAdmins) return new Set<number>();
     return new Set(
@@ -182,7 +120,6 @@ export default function Admin() {
 
   const isAdmin = adminProjectIds.size > 0;
 
-  // Only show verified moats whose project this wallet is admin for
   const adminProjects = React.useMemo(() => {
     if (!projects) return [];
     return projects.filter(p => adminProjectIds.has(p.id));
@@ -202,7 +139,6 @@ export default function Admin() {
   const updateProposal = useUpdateProposal();
   const deleteProposal = useDeleteProposal();
 
-  // Submitted proposals (created by the connected admin)
   const myProposals = React.useMemo(() => {
     if (!address || !allProposals) return [];
     return allProposals.filter(p => p.createdBy?.toLowerCase() === address.toLowerCase());
@@ -257,17 +193,6 @@ export default function Admin() {
     });
   };
 
-  const statusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-    switch (status) {
-      case "active": return "default";
-      case "passed": return "secondary";
-      case "failed":
-      case "cancelled": return "destructive";
-      default: return "outline";
-    }
-  };
-
-  // Proposal form state
   const [propMoatAddr, setPropMoatAddr] = React.useState("");
   const [propTitle, setPropTitle] = React.useState("");
   const [propDesc, setPropDesc] = React.useState("");
@@ -356,129 +281,212 @@ export default function Admin() {
     }
   };
 
-  // ── Access gate ────────────────────────────────────────────────────────────
+  // ── Access gates ────────────────────────────────────────────────────────
   if (!address) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center max-w-md mx-auto animate-in fade-in duration-500">
-        <div className="p-4 rounded-full bg-primary/10 border border-primary/20">
-          <Shield size={32} className="text-primary" />
+      <motion.div
+        variants={fadeUp} initial="initial" animate="animate"
+        className="flex flex-col items-center justify-center gap-5 py-28 text-center max-w-sm mx-auto"
+      >
+        <div
+          className="p-5 rounded-2xl"
+          style={{
+            background: "rgba(212,147,26,0.08)",
+            border: "1px solid rgba(212,147,26,0.2)",
+            boxShadow: "0 0 32px rgba(212,147,26,0.08)",
+          }}
+        >
+          <Shield size={36} className="text-amber-400" />
         </div>
-        <h2 className="text-xl font-bold">Connect Your Wallet</h2>
-        <p className="text-muted-foreground text-sm">Connect your wallet to check your admin access.</p>
-      </div>
+        <div>
+          <h2 className="text-xl font-bold mb-1.5">Connect Your Wallet</h2>
+          <p className="text-sm text-muted-foreground">Connect your wallet to check your admin access.</p>
+        </div>
+      </motion.div>
     );
   }
 
   if (isLoadingAdmins) {
     return (
       <div className="space-y-4 max-w-5xl mx-auto">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-10 w-64 rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center max-w-md mx-auto animate-in fade-in duration-500">
-        <div className="p-4 rounded-full bg-red-500/10 border border-red-500/20">
-          <Shield size={32} className="text-red-500" />
+      <motion.div
+        variants={fadeUp} initial="initial" animate="animate"
+        className="flex flex-col items-center justify-center gap-5 py-28 text-center max-w-sm mx-auto"
+      >
+        <div
+          className="p-5 rounded-2xl"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            boxShadow: "0 0 32px rgba(239,68,68,0.06)",
+          }}
+        >
+          <Shield size={36} className="text-red-400" />
         </div>
-        <h2 className="text-xl font-bold">Access Restricted</h2>
-        <p className="text-muted-foreground text-sm">
-          Your wallet <span className="font-mono text-foreground">{address.slice(0,6)}…{address.slice(-4)}</span> has not been granted admin access. Contact the owner to be added as an administrator.
-        </p>
-      </div>
+        <div>
+          <h2 className="text-xl font-bold mb-1.5">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground">
+            Your wallet{" "}
+            <span
+              className="font-mono px-1.5 py-0.5 rounded text-foreground text-xs"
+              style={{ background: "rgba(255,255,255,0.06)" }}
+            >
+              {address.slice(0,6)}…{address.slice(-4)}
+            </span>{" "}
+            has not been granted admin access.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">Contact the owner to be added as an administrator.</p>
+        </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in zoom-in duration-500 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Admin Command Center</h1>
-        <p className="text-muted-foreground">Create proposals and manage the ones you submitted.</p>
+    <motion.div
+      variants={fadeUp} initial="initial" animate="animate"
+      className="space-y-6 max-w-5xl mx-auto"
+    >
+      {/* ── Page heading ─────────────────────────────────────────────────── */}
+      <div className="flex items-start gap-3">
+        <div
+          className="mt-1 p-1.5 rounded-lg shrink-0"
+          style={{ background: "rgba(212,147,26,0.12)", border: "1px solid rgba(212,147,26,0.2)" }}
+        >
+          <Shield size={16} className="text-amber-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Command Center</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Create proposals and manage the ones you submitted.</p>
+        </div>
       </div>
 
       <Tabs defaultValue="proposals" className="w-full">
-        <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none h-12 p-0 space-x-6 mb-8">
-          <TabsTrigger value="proposals" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Create Proposal</TabsTrigger>
-          <TabsTrigger value="submitted" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 h-full">Submitted Proposals</TabsTrigger>
+        <TabsList
+          className="w-full justify-start bg-transparent rounded-none h-11 p-0 mb-6"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+        >
+          <TabsTrigger
+            value="proposals"
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 h-full mr-6 text-sm font-medium"
+          >
+            Create Proposal
+          </TabsTrigger>
+          <TabsTrigger
+            value="submitted"
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 h-full text-sm font-medium"
+          >
+            Submitted Proposals
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Create Proposal ─────────────────────────────────────────────── */}
         <TabsContent value="proposals">
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>Launch New Proposal</CardTitle>
-              <CardDescription>Create a governance proposal with configurable quorum and voting rules.</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ background: "rgba(11,26,50,0.82)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <div
+              className="px-5 md:px-6 py-4"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <h2 className="font-semibold text-sm">Launch New Proposal</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Create a governance proposal with configurable quorum and voting rules.</p>
+            </div>
+            <div className="p-5 md:p-6">
               <form onSubmit={handleCreateProposal} className="space-y-8">
 
-                {/* Moat selector */}
-                <div className="space-y-2">
-                  <Label>Verified Moat</Label>
-                  {isLoadingMoats ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <Select value={propMoatAddr} onValueChange={setPropMoatAddr} required>
-                      <SelectTrigger className="bg-background" data-testid="select-moat">
-                        <SelectValue placeholder="Select a verified Moat..." />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72 overflow-y-auto">
-                        {verifiedMoats
-                          ?.filter(m => adminProjects.some(
-                            p => p.contractAddress.toLowerCase() === m.contractAddress.toLowerCase()
-                          ))
-                          .map(m => (
-                            <SelectItem key={m.contractAddress} value={m.contractAddress}>
-                              <div className="flex flex-col gap-0.5 py-0.5">
-                                <span className="font-medium text-sm">{m.name}</span>
-                                <span className="font-mono text-[11px] text-muted-foreground">
-                                  {m.contractAddress.slice(0, 6)}...{m.contractAddress.slice(-4)}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {selectedMoat && (
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <CheckCircle2 size={13} className="text-green-500" />
-                      <span className="text-xs text-muted-foreground font-mono">{selectedMoat.contractAddress}</span>
-                      {selectedMoat.tags.map(t => (
-                        <span
-                          key={t.name}
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                          style={{ backgroundColor: t.color + "22", color: t.color, border: `1px solid ${t.color}44` }}
+                {/* ── Basic Info section ───────────────────────────────── */}
+                <FormSection title="Basic Info">
+                  <FieldRow>
+                    <FieldLabel>Verified Moat</FieldLabel>
+                    {isLoadingMoats ? (
+                      <Skeleton className="h-10 w-full rounded-lg" />
+                    ) : (
+                      <Select value={propMoatAddr} onValueChange={setPropMoatAddr} required>
+                        <SelectTrigger
+                          className="h-10 text-sm"
+                          style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                          data-testid="select-moat"
                         >
-                          {t.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                          <SelectValue placeholder="Select a verified Moat…" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72 overflow-y-auto">
+                          {verifiedMoats
+                            ?.filter(m => adminProjects.some(
+                              p => p.contractAddress.toLowerCase() === m.contractAddress.toLowerCase()
+                            ))
+                            .map(m => (
+                              <SelectItem key={m.contractAddress} value={m.contractAddress}>
+                                <div className="flex flex-col gap-0.5 py-0.5">
+                                  <span className="font-medium text-sm">{m.name}</span>
+                                  <span className="font-mono text-[11px] text-muted-foreground">
+                                    {m.contractAddress.slice(0, 6)}…{m.contractAddress.slice(-4)}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {selectedMoat && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <CheckCircle2 size={13} className="text-green-400" />
+                        <span className="text-xs text-muted-foreground font-mono">{selectedMoat.contractAddress}</span>
+                        {selectedMoat.tags.map(t => (
+                          <span
+                            key={t.name}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                            style={{ backgroundColor: t.color + "22", color: t.color, border: `1px solid ${t.color}44` }}
+                          >
+                            {t.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </FieldRow>
 
-                {/* Title & description */}
-                <div className="space-y-2">
-                  <Label>Proposal Title</Label>
-                  <Input value={propTitle} onChange={(e) => setPropTitle(e.target.value)} placeholder="Enter proposal title" required className="bg-background" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea value={propDesc} onChange={(e) => setPropDesc(e.target.value)} placeholder="Detailed description of the proposal" required className="bg-background min-h-[130px]" />
-                </div>
+                  <FieldRow>
+                    <FieldLabel>Proposal Title</FieldLabel>
+                    <Input
+                      value={propTitle}
+                      onChange={e => setPropTitle(e.target.value)}
+                      placeholder="Enter proposal title"
+                      required
+                      className="h-10 text-sm"
+                      style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                    />
+                  </FieldRow>
 
-                {/* ── Voting Configuration ─────────────────────────────────── */}
-                <div className="rounded-lg border border-border/60 p-5 space-y-6 bg-background/40">
-                  <p className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Voting Configuration</p>
+                  <FieldRow>
+                    <FieldLabel>Description</FieldLabel>
+                    <Textarea
+                      value={propDesc}
+                      onChange={e => setPropDesc(e.target.value)}
+                      placeholder="Detailed description of the proposal"
+                      required
+                      className="text-sm min-h-[120px]"
+                      style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                    />
+                  </FieldRow>
+                </FormSection>
 
-                  {/* Voting Method */}
-                  <div className="space-y-2">
-                    <Label>Voting Method</Label>
-                    <Select value={propVotingMethod} onValueChange={(v) => setPropVotingMethod(v as VotingMethod)}>
-                      <SelectTrigger className="bg-background">
+                {/* ── Voting Config section ────────────────────────────── */}
+                <FormSection title="Voting Configuration">
+                  <FieldRow>
+                    <FieldLabel>Voting Method</FieldLabel>
+                    <Select value={propVotingMethod} onValueChange={v => setPropVotingMethod(v as VotingMethod)}>
+                      <SelectTrigger
+                        className="h-10 text-sm"
+                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -490,77 +498,81 @@ export default function Admin() {
                       </SelectContent>
                     </Select>
                     {selectedVotingMeta && (
-                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground pt-0.5">
-                        <Info size={12} className="mt-0.5 shrink-0" />
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <Info size={12} className="mt-0.5 shrink-0 text-primary/50" />
                         {selectedVotingMeta.description}
                       </p>
                     )}
-                  </div>
+                  </FieldRow>
 
-                  {/* Custom voting options (non-basic methods) */}
                   {isCustomMethod && (
-                    <div className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-4">
+                    <div
+                      className="rounded-xl p-4 space-y-3"
+                      style={{ background: "rgba(212,147,26,0.05)", border: "1px solid rgba(212,147,26,0.15)" }}
+                    >
                       <div className="flex items-center justify-between">
-                        <Label className="text-foreground/90">Voting Options</Label>
-                        <span className="text-xs text-muted-foreground font-mono">{cleanedOptions.length}/10</span>
+                        <span className="text-xs font-medium text-amber-400/80">Voting Options</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{cleanedOptions.length}/10</span>
                       </div>
                       <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                        <Info size={12} className="mt-0.5 shrink-0" />
+                        <Info size={12} className="mt-0.5 shrink-0 text-primary/50" />
                         Add the answers voters will choose from (2–10 options).
                       </p>
                       <div className="space-y-2">
                         {propOptions.map((opt, idx) => (
                           <div key={idx} className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">{idx + 1}.</span>
+                            <span className="text-xs font-mono text-muted-foreground/60 w-5 shrink-0">{idx + 1}.</span>
                             <Input
                               value={opt}
-                              onChange={(e) => {
+                              onChange={e => {
                                 const next = [...propOptions];
                                 next[idx] = e.target.value;
                                 setPropOptions(next);
                               }}
                               placeholder={`Option ${idx + 1}`}
-                              className="bg-background"
+                              className="h-9 text-sm"
+                              style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
                               maxLength={120}
                             />
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 disabled:opacity-30"
+                              className="p-2 rounded-lg transition-colors text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-20 shrink-0"
                               disabled={propOptions.length <= 2}
                               onClick={() => setPropOptions(propOptions.filter((_, i) => i !== idx))}
                               aria-label={`Remove option ${idx + 1}`}
                             >
-                              <Trash2 size={15} />
-                            </Button>
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         ))}
                       </div>
-                      <Button
+                      <button
                         type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-dashed"
+                        className="w-full py-2 rounded-lg text-xs font-medium transition-colors border border-dashed border-primary/20 text-primary/60 hover:border-primary/40 hover:text-primary/80 hover:bg-primary/5 disabled:opacity-40"
                         disabled={propOptions.length >= 10}
                         onClick={() => setPropOptions([...propOptions, ""])}
                       >
-                        <Plus size={14} className="mr-1.5" /> Add Option
-                      </Button>
+                        <Plus size={13} className="inline mr-1" /> Add Option
+                      </button>
                     </div>
                   )}
+                </FormSection>
 
-                  {/* Quorum Type */}
-                  <div className="space-y-2">
-                    <Label>Quorum Type</Label>
-                    <Select value={propQuorum} onValueChange={(v) => setPropQuorum(v as QuorumType)}>
-                      <SelectTrigger className="bg-background">
+                {/* ── Quorum section ───────────────────────────────────── */}
+                <FormSection title="Quorum Settings">
+                  <FieldRow>
+                    <FieldLabel>Quorum Type</FieldLabel>
+                    <Select value={propQuorum} onValueChange={v => setPropQuorum(v as QuorumType)}>
+                      <SelectTrigger
+                        className="h-10 text-sm"
+                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-80 overflow-y-auto">
                         {QUORUM_GROUPS.map(group => (
                           <SelectGroup key={group}>
-                            <SelectLabel className="text-[11px] text-muted-foreground/70 uppercase tracking-wide">{group}</SelectLabel>
+                            <SelectLabel className="text-[11px] text-muted-foreground/60 uppercase tracking-wide">{group}</SelectLabel>
                             {QUORUM_TYPES.filter(q => q.group === group).map(q => (
                               <SelectItem key={q.value} value={q.value}>
                                 <span className="font-medium">{q.label}</span>
@@ -571,143 +583,174 @@ export default function Admin() {
                       </SelectContent>
                     </Select>
                     {selectedQuorumMeta && (
-                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground pt-0.5">
-                        <Info size={12} className="mt-0.5 shrink-0" />
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <Info size={12} className="mt-0.5 shrink-0 text-primary/50" />
                         {selectedQuorumMeta.description}
                       </p>
                     )}
-                  </div>
+                  </FieldRow>
 
-                  {/* Threshold fields — context-aware */}
                   <div className={`grid gap-4 ${selectedQuorumMeta?.hasApprovalThreshold ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
-                    <div className="space-y-2">
-                      <Label>
+                    <FieldRow>
+                      <FieldLabel>
                         {selectedQuorumMeta?.thresholdLabel ?? "Quorum Threshold"}
                         {selectedQuorumMeta?.thresholdUnit === "%" ? " (%)" : " (tokens)"}
-                      </Label>
+                      </FieldLabel>
                       <Input
                         type="number"
                         min={selectedQuorumMeta?.thresholdUnit === "tokens" ? "1" : "1"}
                         max={selectedQuorumMeta?.thresholdUnit === "%" ? "100" : undefined}
                         step={selectedQuorumMeta?.thresholdUnit === "tokens" ? "1" : "0.1"}
                         value={propThreshold}
-                        onChange={(e) => setPropThreshold(e.target.value)}
+                        onChange={e => setPropThreshold(e.target.value)}
                         required
-                        className="bg-background"
+                        className="h-10 text-sm font-mono"
+                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
                       />
-                    </div>
+                    </FieldRow>
 
                     {selectedQuorumMeta?.hasApprovalThreshold ? (
-                      <div className="space-y-2">
-                        <Label>Approval Threshold (%)</Label>
+                      <FieldRow>
+                        <FieldLabel>Approval Threshold (%)</FieldLabel>
                         <Input
                           type="number"
                           min="1"
                           max="100"
                           step="0.1"
                           value={propApprovalThreshold}
-                          onChange={(e) => setPropApprovalThreshold(e.target.value)}
+                          onChange={e => setPropApprovalThreshold(e.target.value)}
                           required
-                          className="bg-background"
+                          className="h-10 text-sm font-mono"
+                          style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
                         />
-                      </div>
+                      </FieldRow>
                     ) : (
-                      <div /> /* keep grid balanced */
+                      <div />
                     )}
                   </div>
-                </div>
+                </FormSection>
 
-                {/* Dates */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Start Date</Label>
-                    <Input type="datetime-local" value={propStart} onChange={(e) => setPropStart(e.target.value)} required className="bg-background" />
+                {/* ── Schedule section ─────────────────────────────────── */}
+                <FormSection title="Schedule">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FieldRow>
+                      <FieldLabel>Start Date</FieldLabel>
+                      <Input
+                        type="datetime-local"
+                        value={propStart}
+                        onChange={e => setPropStart(e.target.value)}
+                        required
+                        className="h-10 text-sm"
+                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <FieldLabel>End Date</FieldLabel>
+                      <Input
+                        type="datetime-local"
+                        value={propEnd}
+                        onChange={e => setPropEnd(e.target.value)}
+                        required
+                        className="h-10 text-sm"
+                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                      />
+                    </FieldRow>
                   </div>
-                  <div className="space-y-2">
-                    <Label>End Date</Label>
-                    <Input type="datetime-local" value={propEnd} onChange={(e) => setPropEnd(e.target.value)} required className="bg-background" />
-                  </div>
-                </div>
+                </FormSection>
 
-                <Button type="submit" disabled={isSubmittingProposal || createProposal.isPending} className="w-full sm:w-auto">
-                  {isSubmittingProposal || createProposal.isPending ? "Submitting..." : "Submit Proposal"}
+                <Button
+                  type="submit"
+                  disabled={isSubmittingProposal || createProposal.isPending}
+                  className="w-full sm:w-auto h-11 px-8 font-semibold"
+                  style={{
+                    background: "linear-gradient(135deg, #D4931A, #B8771A)",
+                    color: "#050d18",
+                    boxShadow: "0 2px 16px rgba(212,147,26,0.3)",
+                    border: "none",
+                  }}
+                >
+                  {isSubmittingProposal || createProposal.isPending ? "Submitting…" : "Submit Proposal"}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ── Submitted Proposals ──────────────────────────────────────────── */}
         <TabsContent value="submitted">
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>Submitted Proposals</CardTitle>
-              <CardDescription>
-                Proposals you submitted from this wallet. Edit details or delete (cancel) them.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ background: "rgba(11,26,50,0.82)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <div
+              className="px-5 md:px-6 py-4 flex items-center gap-2"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <FileText size={15} className="text-amber-400/70" />
+              <h2 className="font-semibold text-sm">Submitted Proposals</h2>
+            </div>
+            <div className="p-5 md:p-6">
               {!address ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
-                  <Info size={28} className="opacity-50" />
-                  <p>Connect your wallet to view the proposals you submitted.</p>
+                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-muted-foreground">
+                  <Info size={24} className="opacity-25" />
+                  <p className="text-sm">Connect your wallet to view your submitted proposals.</p>
                 </div>
               ) : isLoadingProposals ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+                <div className="space-y-2.5">
+                  {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
                 </div>
               ) : myProposals.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
-                  <FileText size={28} className="opacity-50" />
-                  <p>You haven't submitted any proposals yet.</p>
+                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-muted-foreground">
+                  <FileText size={24} className="opacity-25" />
+                  <p className="text-sm">You haven't submitted any proposals yet.</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead>Title</TableHead>
-                      <TableHead>Project</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ends</TableHead>
-                      <TableHead className="text-right">Votes</TableHead>
-                      <TableHead className="w-28 text-right">Actions</TableHead>
+                    <TableRow style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                      <TableHead className="text-xs">Title</TableHead>
+                      <TableHead className="text-xs">Project</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Ends</TableHead>
+                      <TableHead className="text-right text-xs">Votes</TableHead>
+                      <TableHead className="w-24 text-right text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {myProposals.map((p) => (
-                      <TableRow key={p.id} className="border-border/50">
-                        <TableCell className="font-medium max-w-[220px] truncate">{p.title}</TableCell>
-                        <TableCell className="text-muted-foreground">{p.projectName}</TableCell>
+                    {myProposals.map((p, i) => (
+                      <TableRow
+                        key={p.id}
+                        style={{
+                          borderColor: "rgba(255,255,255,0.04)",
+                          background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)",
+                        }}
+                      >
+                        <TableCell className="font-medium text-sm max-w-[220px] truncate">{p.title}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{p.projectName}</TableCell>
                         <TableCell>
-                          <Badge variant={statusVariant(p.status)} className="capitalize">{p.status}</Badge>
+                          <Badge variant={statusVariant(p.status)} className="capitalize text-[10px]">{p.status}</Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {new Date(p.endDate).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right font-mono">{p.totalVotes ?? 0}</TableCell>
+                        <TableCell className="text-right font-mono text-xs">{p.totalVotes ?? 0}</TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            <button
+                              className="p-1.5 rounded-lg transition-colors text-muted-foreground/50 hover:text-primary hover:bg-primary/10"
                               onClick={() => openEdit(p)}
                               aria-label={`Edit ${p.title}`}
                             >
-                              <Pencil size={15} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className="p-1.5 rounded-lg transition-colors text-red-400/40 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-20"
                               onClick={() => handleDeleteProposal(p)}
                               disabled={deleteProposal.isPending || p.status === "cancelled"}
                               aria-label={`Delete ${p.title}`}
                             >
-                              <Trash2 size={15} />
-                            </Button>
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -715,40 +758,72 @@ export default function Admin() {
                   </TableBody>
                 </Table>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
       {/* ── Edit Proposal Dialog ───────────────────────────────────────────── */}
-      <Dialog open={!!editProposal} onOpenChange={(open) => { if (!open) setEditProposal(null); }}>
-        <DialogContent className="bg-card">
+      <Dialog open={!!editProposal} onOpenChange={open => { if (!open) setEditProposal(null); }}>
+        <DialogContent
+          style={{ background: "rgba(11,26,50,0.98)", border: "1px solid rgba(212,147,26,0.15)" }}
+        >
           <DialogHeader>
             <DialogTitle>Edit Proposal</DialogTitle>
             <DialogDescription>Update the title, description, or end date of your proposal.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdateProposal} className="space-y-5">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required className="bg-background" />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} required className="bg-background min-h-[120px]" />
-            </div>
-            <div className="space-y-2">
-              <Label>End Date</Label>
-              <Input type="datetime-local" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} required className="bg-background" />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditProposal(null)}>Cancel</Button>
-              <Button type="submit" disabled={updateProposal.isPending}>
-                {updateProposal.isPending ? "Saving..." : "Save Changes"}
+          <form onSubmit={handleUpdateProposal} className="space-y-4 mt-2">
+            <FieldRow>
+              <FieldLabel>Title</FieldLabel>
+              <Input
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                required
+                className="h-10 text-sm"
+                style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)" }}
+              />
+            </FieldRow>
+            <FieldRow>
+              <FieldLabel>Description</FieldLabel>
+              <Textarea
+                value={editDesc}
+                onChange={e => setEditDesc(e.target.value)}
+                required
+                className="text-sm min-h-[110px]"
+                style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)" }}
+              />
+            </FieldRow>
+            <FieldRow>
+              <FieldLabel>End Date</FieldLabel>
+              <Input
+                type="datetime-local"
+                value={editEnd}
+                onChange={e => setEditEnd(e.target.value)}
+                required
+                className="h-10 text-sm"
+                style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)" }}
+              />
+            </FieldRow>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditProposal(null)} className="text-sm">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateProposal.isPending}
+                className="text-sm font-semibold"
+                style={{
+                  background: "linear-gradient(135deg, #D4931A, #B8771A)",
+                  color: "#050d18",
+                  border: "none",
+                }}
+              >
+                {updateProposal.isPending ? "Saving…" : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

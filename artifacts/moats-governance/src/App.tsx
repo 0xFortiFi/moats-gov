@@ -1,6 +1,6 @@
 import { WagmiProvider, useAccount } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { wagmiAdapter } from "@/lib/wallet";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,8 +15,20 @@ import Owner from "@/pages/owner";
 import NotFound from "@/pages/not-found";
 import { setWalletAddress } from "@workspace/api-client-react";
 import { useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 const queryClient = new QueryClient();
+
+const pageVariants = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -10 },
+};
+
+const pageTransition = {
+  duration: 0.22,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
 
 function WalletSync() {
   const { address } = useAccount();
@@ -27,19 +39,34 @@ function WalletSync() {
 }
 
 function Router() {
+  const [location] = useLocation();
+  const pageKey = location.split("/")[1] || "home";
+
   return (
     <Layout>
       <WalletSync />
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/projects" component={Projects} />
-        <Route path="/projects/:id" component={ProjectDetail} />
-        <Route path="/proposals" component={Proposals} />
-        <Route path="/proposals/:id" component={ProposalDetail} />
-        <Route path="/admin" component={Admin} />
-        <Route path="/owner" component={Owner} />
-        <Route component={NotFound} />
-      </Switch>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={pageKey}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransition}
+          className="min-h-full"
+        >
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/projects" component={Projects} />
+            <Route path="/projects/:id" component={ProjectDetail} />
+            <Route path="/proposals" component={Proposals} />
+            <Route path="/proposals/:id" component={ProposalDetail} />
+            <Route path="/admin" component={Admin} />
+            <Route path="/owner" component={Owner} />
+            <Route component={NotFound} />
+          </Switch>
+        </motion.div>
+      </AnimatePresence>
     </Layout>
   );
 }
