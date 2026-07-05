@@ -10,11 +10,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ethIcon from "@/assets/networks/eth.png";
+import baseIcon from "@/assets/networks/base.png";
+import bnbIcon from "@/assets/networks/bnb.png";
+import monadIcon from "@/assets/networks/monad.png";
+import grottoIcon from "@/assets/networks/grotto.png";
+import blazeIcon from "@/assets/networks/blaze.png";
+import avalancheIcon from "@/assets/networks/avalanche.png";
 
 export const NETWORKS = [
-  { id: "avalanche", label: "Avalanche" },
-  { id: "thegrotto", label: "The Grotto" },
+  { id: "eth", label: "Ethereum", icon: ethIcon },
+  { id: "base", label: "Base", icon: baseIcon },
+  { id: "bsc", label: "BNB", icon: bnbIcon },
+  { id: "monad", label: "Monad", icon: monadIcon },
+  { id: "thegrotto", label: "The Grotto", icon: grottoIcon },
+  { id: "blaze", label: "Blaze", icon: blazeIcon },
+  { id: "avalanche", label: "Avalanche", icon: avalancheIcon },
 ] as const;
+
+export function networkIcon(id: string | null | undefined): string | undefined {
+  return NETWORKS.find(n => n.id === id)?.icon;
+}
 
 export function networkLabel(id: string | null | undefined): string {
   const n = NETWORKS.find(n => n.id === id);
@@ -53,7 +69,6 @@ function NetworkSelector() {
         }}
         aria-label="Select network"
       >
-        <Globe size={13} className="text-amber-400 shrink-0" />
         <SelectValue />
       </SelectTrigger>
       <SelectContent
@@ -64,9 +79,23 @@ function NetworkSelector() {
           color: "rgba(220,230,242,0.9)",
         }}
       >
-        <SelectItem value="all">All Networks</SelectItem>
+        <SelectItem value="all">
+          <span className="flex items-center gap-2">
+            <Globe size={14} className="text-amber-400 shrink-0" />
+            All Networks
+          </span>
+        </SelectItem>
         {NETWORKS.map(n => (
-          <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
+          <SelectItem key={n.id} value={n.id}>
+            <span className="flex items-center gap-2">
+              <img
+                src={n.icon}
+                alt=""
+                className="w-4 h-4 rounded-full object-cover shrink-0"
+              />
+              {n.label}
+            </span>
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>

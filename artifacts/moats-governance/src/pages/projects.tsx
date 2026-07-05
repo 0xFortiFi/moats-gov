@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { BoxSelect, Activity, ArrowUpRight, ExternalLink, FolderOpen, Globe } from "lucide-react";
 import { motion } from "framer-motion";
-import { useSelectedNetwork, networkLabel } from "@/components/layout";
+import { useSelectedNetwork, networkLabel, networkIcon } from "@/components/layout";
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
@@ -115,7 +115,15 @@ export default function Projects() {
                             color: "rgba(212,147,26,0.85)",
                           }}
                         >
-                          <Globe size={9} />
+                          {networkIcon(project.network) ? (
+                            <img
+                              src={networkIcon(project.network)}
+                              alt=""
+                              className="w-3 h-3 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <Globe size={9} />
+                          )}
                           {networkLabel(project.network)}
                         </span>
                       ) : null}
