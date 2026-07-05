@@ -253,6 +253,8 @@ const LOGO_OVERRIDES: Record<string, string> = {
   "0xb3fcc83669d96934dee361e897f9ec33c911deaf": "https://i.ibb.co/BKZRnGSK/discloser.jpg",
   // Pharaoh Volatile - WAVAX/hCASH Moat
   "0x501f6e7bec3db63d8dacbc9fa0ce42d5d2329d53": "https://i.ibb.co/LXFYNcJ6/hashcashclub.png",
+  // Greg Moat
+  "0x57e7e1d6eb7c9e3a5d2a5b4d8fff0d667c840272": "https://i.ibb.co/7tcD1N27/greg-token.jpg",
 };
 
 // 10-minute in-memory cache
