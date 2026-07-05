@@ -1,10 +1,8 @@
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { useGetProject, useGetProjectLeaderboard, useListProposals, getGetProjectQueryKey, getGetProjectLeaderboardQueryKey, getListProposalsQueryKey } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Link } from "wouter";
 import { Activity, Clock, Trophy, ExternalLink, Shield, ChevronRight, Copy } from "lucide-react";
 import { getStatusColor } from "./dashboard";
 import { motion } from "framer-motion";
@@ -12,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const fadeUp = {
   initial: { opacity: 0, y: 14 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22,1,0.36,1] } },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22,1,0.36,1] as [number,number,number,number] } },
 };
 
 const rankColors = ["#D4931A", "#94a3b8", "#92400e"];
@@ -20,6 +18,7 @@ const rankGlows  = ["rgba(212,147,26,0.35)", "rgba(148,163,184,0.25)", "rgba(146
 
 export default function ProjectDetail() {
   const [, params] = useRoute("/projects/:id");
+  const [, navigate] = useLocation();
   const projectId = params?.id ? parseInt(params.id, 10) : 0;
   const { toast } = useToast();
 
@@ -40,7 +39,10 @@ export default function ProjectDetail() {
       <div className="space-y-6 max-w-6xl mx-auto">
         <Skeleton className="h-12 w-64 rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
-        <Skeleton className="h-72 w-full rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="md:col-span-2 h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -124,29 +126,25 @@ export default function ProjectDetail() {
         </div>
       </motion.div>
 
-      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
+      {/* ── Two-column layout: Proposals (left) + Leaderboard (right) ─────── */}
       <motion.div variants={fadeUp} initial="initial" animate="animate">
-        <Tabs defaultValue="proposals" className="w-full">
-          <TabsList
-            className="w-full justify-start bg-transparent rounded-none h-11 p-0 mb-5"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-          >
-            <TabsTrigger
-              value="proposals"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 h-full mr-6 text-sm font-medium"
-            >
-              Proposals
-            </TabsTrigger>
-            <TabsTrigger
-              value="leaderboard"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 h-full text-sm font-medium"
-            >
-              Moat Points Leaderboard
-            </TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
-          {/* Proposals tab */}
-          <TabsContent value="proposals">
+          {/* ── Proposals column (2/3 width on desktop) ─────────────────── */}
+          <div className="md:col-span-2 space-y-3">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity size={15} className="text-amber-400/70" />
+              <h2 className="font-semibold text-sm">Proposals</h2>
+              {proposals && proposals.length > 0 && (
+                <span
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded-md"
+                  style={{ background: "rgba(212,147,26,0.12)", color: "#D4931A" }}
+                >
+                  {proposals.length}
+                </span>
+              )}
+            </div>
+
             {isLoadingProposals ? (
               <div className="space-y-3">
                 {[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
@@ -156,104 +154,107 @@ export default function ProjectDetail() {
                 className="rounded-xl border border-dashed border-border/50 flex flex-col items-center justify-center h-44 text-muted-foreground"
               >
                 <Activity size={28} className="mb-3 opacity-25" />
-                <p className="text-sm">No proposals found for this project.</p>
+                <p className="text-sm">No proposals for this project yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {proposals?.map(proposal => (
-                  <Link key={proposal.id} href={`/proposals/${proposal.id}`} className="block group">
-                    <div
-                      className="rounded-xl p-4 md:p-5 flex items-center gap-4 card-hover-glow cursor-pointer"
-                      style={{ background: "rgba(11,26,50,0.8)", border: "1px solid rgba(255,255,255,0.07)" }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-2 py-0 h-5 ${getStatusColor(proposal.status)}`}
-                          >
-                            {proposal.status.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <p className="font-semibold text-sm leading-snug text-foreground group-hover:text-amber-300 transition-colors line-clamp-1">
-                          {proposal.title}
-                        </p>
-                        <div className="flex items-center gap-3 mt-1.5 text-[11px] font-mono text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock size={11} />
-                            Ends {new Date(proposal.endDate).toLocaleDateString()}
-                          </span>
-                          <span>Quorum: {proposal.quorumThreshold}%</span>
-                        </div>
+                  <div
+                    key={proposal.id}
+                    className="rounded-xl p-4 md:p-5 flex items-center gap-4 card-hover-glow cursor-pointer group"
+                    style={{ background: "rgba(11,26,50,0.8)", border: "1px solid rgba(255,255,255,0.07)" }}
+                    onClick={() => navigate(`/proposals/${proposal.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => e.key === "Enter" && navigate(`/proposals/${proposal.id}`)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-2 py-0 h-5 ${getStatusColor(proposal.status)}`}
+                        >
+                          {proposal.status.toUpperCase()}
+                        </Badge>
                       </div>
-                      <ChevronRight size={16} className="text-muted-foreground/30 group-hover:text-primary transition-colors shrink-0" />
+                      <p className="font-semibold text-sm leading-snug text-foreground group-hover:text-amber-300 transition-colors line-clamp-1">
+                        {proposal.title}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1.5 text-[11px] font-mono text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock size={11} />
+                          Ends {new Date(proposal.endDate).toLocaleDateString()}
+                        </span>
+                        <span>Quorum: {proposal.quorumThreshold}%</span>
+                      </div>
                     </div>
-                  </Link>
+                    <ChevronRight size={16} className="text-muted-foreground/30 group-hover:text-primary transition-colors shrink-0" />
+                  </div>
                 ))}
               </div>
             )}
-          </TabsContent>
+          </div>
 
-          {/* Leaderboard tab */}
-          <TabsContent value="leaderboard">
+          {/* ── Leaderboard column (1/3 width on desktop) ───────────────── */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy size={15} className="text-amber-400" />
+              <h2 className="font-semibold text-sm">Top Delegates</h2>
+            </div>
+
             <div
               className="rounded-xl overflow-hidden"
               style={{ background: "rgba(11,26,50,0.8)", border: "1px solid rgba(255,255,255,0.07)" }}
             >
-              <div
-                className="px-5 md:px-6 py-4 flex items-center gap-2"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <Trophy size={16} className="text-amber-400" />
-                <h2 className="font-semibold text-sm">Top Delegates</h2>
-              </div>
-              <div className="p-5 md:p-6">
-                {isLoadingLeaderboard ? (
-                  <div className="space-y-2.5">
-                    {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
-                  </div>
-                ) : leaderboard?.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground text-sm">
-                    No Moat Points distributed yet.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                        <TableHead className="w-16 text-xs">Rank</TableHead>
-                        <TableHead className="text-xs">Wallet</TableHead>
-                        <TableHead className="text-right text-xs">Moat Points</TableHead>
+              {isLoadingLeaderboard ? (
+                <div className="p-5 space-y-2.5">
+                  {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}
+                </div>
+              ) : leaderboard?.length === 0 ? (
+                <div className="text-center py-10 px-5 text-muted-foreground text-sm">
+                  No Moat Points distributed yet.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                      <TableHead className="w-12 text-xs pl-4">Rank</TableHead>
+                      <TableHead className="text-xs">Wallet</TableHead>
+                      <TableHead className="text-right text-xs pr-4">Points</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaderboard?.map(entry => {
+                      const rank = entry.rank ?? 0;
+                      return (
+                      <TableRow key={entry.walletAddress} style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                        <TableCell className="pl-4">
+                          <span
+                            className="font-mono text-sm font-bold"
+                            style={{
+                              color: rank <= 3 && rank > 0 ? rankColors[rank - 1] : "rgba(148,163,184,0.6)",
+                              textShadow: rank <= 3 && rank > 0 ? `0 0 8px ${rankGlows[rank - 1]}` : "none",
+                            }}
+                          >
+                            {rank <= 3 && rank > 0 ? ["🥇","🥈","🥉"][rank - 1] : `#${rank}`}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {entry.walletAddress.slice(0, 6)}…{entry.walletAddress.slice(-4)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-bold text-sm pr-4" style={{ color: "#D4931A" }}>
+                          {entry.points.toLocaleString()}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {leaderboard?.map(entry => (
-                        <TableRow key={entry.walletAddress} style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                          <TableCell>
-                            <span
-                              className="font-mono text-sm font-bold"
-                              style={{
-                                color: entry.rank <= 3 ? rankColors[entry.rank - 1] : "rgba(148,163,184,0.6)",
-                                textShadow: entry.rank <= 3 ? `0 0 8px ${rankGlows[entry.rank - 1]}` : "none",
-                              }}
-                            >
-                              {entry.rank <= 3 ? ["🥇","🥈","🥉"][entry.rank - 1] : `#${entry.rank}`}
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {entry.walletAddress.slice(0, 8)}…{entry.walletAddress.slice(-6)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-bold text-sm" style={{ color: "#D4931A" }}>
-                            {entry.points.toLocaleString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+
+        </div>
       </motion.div>
     </div>
   );

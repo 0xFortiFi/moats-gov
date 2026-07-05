@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 
 const fadeUp = {
   initial: { opacity: 0, y: 14 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22,1,0.36,1] } },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22,1,0.36,1] as [number,number,number,number] } },
 };
 
 function VoteBar({ label, color, value, count }: { label: string; color: string; value: number; count: number }) {
@@ -34,7 +34,7 @@ function VoteBar({ label, color, value, count }: { label: string; color: string;
           style={{ background: color, boxShadow: `0 0 8px ${color}50` }}
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
-          transition={{ duration: 0.8, ease: [0.22,1,0.36,1], delay: 0.1 }}
+          transition={{ duration: 0.8, ease: [0.22,1,0.36,1] as [number,number,number,number], delay: 0.1 }}
         />
       </div>
     </div>
@@ -569,7 +569,7 @@ export default function ProposalDetail() {
                             style={{ background: "linear-gradient(90deg, #D4931A, #F0B429)" }}
                             initial={{ width: 0 }}
                             animate={{ width: `${t.percent}%` }}
-                            transition={{ duration: 0.8, ease: [0.22,1,0.36,1], delay: idx * 0.05 }}
+                            transition={{ duration: 0.8, ease: [0.22,1,0.36,1] as [number,number,number,number], delay: idx * 0.05 }}
                           />
                         </div>
                       </div>
