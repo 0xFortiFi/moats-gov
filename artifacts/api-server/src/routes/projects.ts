@@ -233,6 +233,8 @@ type VerifiedMoat = {
 const LOGO_OVERRIDES: Record<string, string> = {
   // HEFE Moat
   "0xcf65744c955a292d11de2a4184e9fabedbfc7b40": "https://i.ibb.co/HTyxbsq3/Hefelogo-new.png",
+  // SEEDS Moat
+  "0xec7a708c9a9ac691d5e8be056bbd5c8251f003ea": "https://i.ibb.co/0RRDSYjG/Seeds.png",
 };
 
 // 10-minute in-memory cache
