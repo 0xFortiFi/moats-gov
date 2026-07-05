@@ -239,6 +239,8 @@ const LOGO_OVERRIDES: Record<string, string> = {
   "0xbc6c01957d542537f040adc1df57af87cf84671b": "https://i.ibb.co/SD12F0Dv/redpopcorn-pfp.jpg",
   // Discloser Moat
   "0xb3fcc83669d96934dee361e897f9ec33c911deaf": "https://i.ibb.co/BKZRnGSK/discloser.jpg",
+  // Pharaoh Volatile - WAVAX/hCASH Moat
+  "0x501f6e7bec3db63d8dacbc9fa0ce42d5d2329d53": "https://i.ibb.co/LXFYNcJ6/hashcashclub.png",
 };
 
 // 10-minute in-memory cache
