@@ -1,5 +1,12 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
+
+async function runStartupMigrations() {
+  await pool.query(
+    'ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "network" text',
+  );
+}
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +22,18 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+runStartupMigrations()
+  .then(() => {
+    app.listen(port, (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
 
-  logger.info({ port }, "Server listening");
-});
+      logger.info({ port }, "Server listening");
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Startup migration failed");
+    process.exit(1);
+  });
