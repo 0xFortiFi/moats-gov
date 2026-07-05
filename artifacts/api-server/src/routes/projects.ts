@@ -138,16 +138,15 @@ router.get("/projects/:id/leaderboard", async (req, res) => {
       return;
     }
     const data = (await response.json()) as Array<{
-      walletAddress: string;
-      contractAddress: string;
+      address?: string;
+      walletAddress?: string;
       points: number;
-      lastUpdated: number;
     }>;
     const entries = data
       .sort((a, b) => b.points - a.points)
       .slice(0, 100)
       .map((entry, i) => ({
-        walletAddress: entry.walletAddress,
+        walletAddress: entry.walletAddress ?? entry.address ?? "",
         points: entry.points,
         rank: i + 1,
       }));
@@ -230,6 +229,12 @@ type VerifiedMoat = {
   tags: Array<{ name: string; color: string }>;
 };
 
+// Manual logo overrides (lowercase contract address → URL). Takes priority over DexScreener.
+const LOGO_OVERRIDES: Record<string, string> = {
+  // HEFE Moat
+  "0xcf65744c955a292d11de2a4184e9fabedbfc7b40": "https://i.ibb.co/HTyxbsq3/Hefelogo-new.png",
+};
+
 // 10-minute in-memory cache
 let verifiedMoatsCache: { data: VerifiedMoat[]; expiresAt: number } | null = null;
 
@@ -262,7 +267,7 @@ async function getVerifiedMoats(): Promise<VerifiedMoat[]> {
       name: resolved[i].name ?? `Moat ${shortAddr}`,
       network: m.network,
       description: m.rewardStrategy ?? null,
-      logoUrl: logos[i],
+      logoUrl: LOGO_OVERRIDES[m.contractAddress.toLowerCase()] ?? logos[i],
       tags: (m.tags ?? []).map((t) => ({ name: t.name, color: t.color })),
     };
   });

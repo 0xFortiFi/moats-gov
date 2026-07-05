@@ -75,10 +75,24 @@ export default function ProjectDetail() {
           <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex items-start gap-4">
               <div
-                className="h-14 w-14 rounded-xl flex items-center justify-center shrink-0"
+                className="h-14 w-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
                 style={{ background: "rgba(212,147,26,0.1)", border: "1.5px solid rgba(212,147,26,0.22)" }}
               >
-                <span className="text-xl font-bold gold-text">{project.name.charAt(0)}</span>
+                {project.logoUrl ? (
+                  <img
+                    src={project.logoUrl}
+                    alt={`${project.name} logo`}
+                    className="h-full w-full object-cover"
+                    onError={e => {
+                      const el = e.currentTarget;
+                      el.style.display = "none";
+                      el.nextElementSibling?.classList.remove("hidden");
+                    }}
+                  />
+                ) : null}
+                <span className={`text-xl font-bold gold-text ${project.logoUrl ? "hidden" : ""}`}>
+                  {project.name.charAt(0)}
+                </span>
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">{project.name}</h1>
@@ -226,8 +240,9 @@ export default function ProjectDetail() {
                   <TableBody>
                     {leaderboard?.map(entry => {
                       const rank = entry.rank ?? 0;
+                      const wallet = entry.walletAddress ?? "";
                       return (
-                      <TableRow key={entry.walletAddress} style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                      <TableRow key={wallet || rank} style={{ borderColor: "rgba(255,255,255,0.04)" }}>
                         <TableCell className="pl-4">
                           <span
                             className="font-mono text-sm font-bold"
@@ -240,7 +255,7 @@ export default function ProjectDetail() {
                           </span>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
-                          {entry.walletAddress.slice(0, 6)}…{entry.walletAddress.slice(-4)}
+                          {wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : "—"}
                         </TableCell>
                         <TableCell className="text-right font-mono font-bold text-sm pr-4" style={{ color: "#D4931A" }}>
                           {entry.points.toLocaleString()}

@@ -75,10 +75,25 @@ export default function Projects() {
                   {/* Header row */}
                   <div className="flex items-start justify-between mb-3">
                     <div
-                      className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+                      className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
                       style={{ background: "rgba(212,147,26,0.1)", border: "1px solid rgba(212,147,26,0.18)" }}
                     >
-                      <span className="text-sm font-bold gold-text">{project.name.charAt(0)}</span>
+                      {project.logoUrl ? (
+                        <img
+                          src={project.logoUrl}
+                          alt={`${project.name} logo`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          onError={e => {
+                            const el = e.currentTarget;
+                            el.style.display = "none";
+                            el.nextElementSibling?.classList.remove("hidden");
+                          }}
+                        />
+                      ) : null}
+                      <span className={`text-sm font-bold gold-text ${project.logoUrl ? "hidden" : ""}`}>
+                        {project.name.charAt(0)}
+                      </span>
                     </div>
                     <ArrowUpRight
                       size={16}
