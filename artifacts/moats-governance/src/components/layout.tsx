@@ -1,8 +1,77 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { appKit } from "@/lib/wallet";
 import { useAccount } from "wagmi";
 import logoUrl from "@assets/IMG_1555_1780933782029.jpg";
-import { LayoutDashboard, FolderOpen, FileText, Shield } from "lucide-react";
+import { LayoutDashboard, FolderOpen, FileText, Shield, Globe } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export const NETWORKS = [
+  { id: "avalanche", label: "Avalanche" },
+  { id: "thegrotto", label: "The Grotto" },
+] as const;
+
+export function networkLabel(id: string | null | undefined): string {
+  const n = NETWORKS.find(n => n.id === id);
+  return n?.label ?? (id ?? "Unknown");
+}
+
+export function useSelectedNetwork(): string {
+  const search = useSearch();
+  return new URLSearchParams(search).get("network") ?? "all";
+}
+
+function NetworkSelector() {
+  const search = useSearch();
+  const [location, navigate] = useLocation();
+  const current = new URLSearchParams(search).get("network") ?? "all";
+
+  const handleChange = (value: string) => {
+    const params = new URLSearchParams(search);
+    if (value === "all") {
+      params.delete("network");
+    } else {
+      params.set("network", value);
+    }
+    const qs = params.toString();
+    navigate(`${location}${qs ? `?${qs}` : ""}`, { replace: true });
+  };
+
+  return (
+    <Select value={current} onValueChange={handleChange}>
+      <SelectTrigger
+        className="h-8 md:h-9 w-auto gap-1.5 rounded-full px-2.5 md:px-3.5 text-xs md:text-sm font-medium border-0 focus:ring-0 focus:ring-offset-0"
+        style={{
+          background: "rgba(11,26,50,0.7)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          color: "rgba(220,230,242,0.9)",
+        }}
+        aria-label="Select network"
+      >
+        <Globe size={13} className="text-amber-400 shrink-0" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent
+        className="rounded-xl"
+        style={{
+          background: "rgba(8,18,34,0.98)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          color: "rgba(220,230,242,0.9)",
+        }}
+      >
+        <SelectItem value="all">All Networks</SelectItem>
+        {NETWORKS.map(n => (
+          <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function WalletButton() {
   const { address, isConnected } = useAccount();
@@ -200,7 +269,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-3">
+            <NetworkSelector />
             <WalletButton />
           </div>
         </div>

@@ -23,6 +23,7 @@ router.get("/projects", async (req, res) => {
               contractAddress: m.contractAddress,
               description: m.description ?? null,
               logoUrl: m.logoUrl ?? null,
+              network: m.network ?? null,
             }))
           )
           .onConflictDoUpdate({
@@ -31,6 +32,7 @@ router.get("/projects", async (req, res) => {
               name: sql`excluded.name`,
               description: sql`excluded.description`,
               logoUrl: sql`coalesce(excluded.logo_url, ${projectsTable.logoUrl})`,
+              network: sql`coalesce(excluded.network, ${projectsTable.network})`,
             },
           });
       }
@@ -47,6 +49,7 @@ router.get("/projects", async (req, res) => {
         contractAddress: p.contractAddress,
         description: p.description,
         logoUrl: p.logoUrl,
+        network: p.network,
         totalProposals: p.totalProposals,
         activeProposals: p.activeProposals,
         createdAt: p.createdAt.toISOString(),
@@ -80,6 +83,7 @@ router.post("/projects", async (req, res) => {
       contractAddress: project.contractAddress,
       description: project.description,
       logoUrl: project.logoUrl,
+      network: project.network,
       totalProposals: project.totalProposals,
       activeProposals: project.activeProposals,
       createdAt: project.createdAt.toISOString(),
@@ -108,6 +112,7 @@ router.get("/projects/:id", async (req, res) => {
       contractAddress: project.contractAddress,
       description: project.description,
       logoUrl: project.logoUrl,
+      network: project.network,
       totalProposals: project.totalProposals,
       activeProposals: project.activeProposals,
       createdAt: project.createdAt.toISOString(),
@@ -229,6 +234,13 @@ type VerifiedMoat = {
   tags: Array<{ name: string; color: string }>;
 };
 
+// Manual name overrides (lowercase contract address → display name). Used when the
+// moat's token name can't be resolved on-chain (e.g. non-Avalanche networks).
+const NAME_OVERRIDES: Record<string, string> = {
+  // Greg Moat (thegrotto network — not resolvable via Avalanche RPC)
+  "0x57e7e1d6eb7c9e3a5d2a5b4d8fff0d667c840272": "Greg Moat",
+};
+
 // Manual logo overrides (lowercase contract address → URL). Takes priority over DexScreener.
 const LOGO_OVERRIDES: Record<string, string> = {
   // HEFE Moat
@@ -272,7 +284,7 @@ async function getVerifiedMoats(): Promise<VerifiedMoat[]> {
     const shortAddr = `${m.contractAddress.slice(0, 6)}...${m.contractAddress.slice(-4)}`;
     return {
       contractAddress: m.contractAddress,
-      name: resolved[i].name ?? `Moat ${shortAddr}`,
+      name: NAME_OVERRIDES[m.contractAddress.toLowerCase()] ?? resolved[i].name ?? `Moat ${shortAddr}`,
       network: m.network,
       description: m.rewardStrategy ?? null,
       logoUrl: LOGO_OVERRIDES[m.contractAddress.toLowerCase()] ?? logos[i],

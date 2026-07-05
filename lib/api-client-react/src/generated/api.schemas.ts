@@ -17,6 +17,8 @@ export interface Project {
   description?: string | null;
   /** @nullable */
   logoUrl?: string | null;
+  /** @nullable */
+  network?: string | null;
   totalProposals?: number;
   activeProposals?: number;
   createdAt: string;

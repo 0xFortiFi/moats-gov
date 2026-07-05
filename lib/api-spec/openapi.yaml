@@ -375,6 +375,8 @@ components:
           type: ["string", "null"]
         logoUrl:
           type: ["string", "null"]
+        network:
+          type: ["string", "null"]
         totalProposals:
           type: integer
         activeProposals:

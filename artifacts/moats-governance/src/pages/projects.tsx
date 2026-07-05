@@ -1,8 +1,9 @@
 import { useListProjects } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { BoxSelect, Activity, ArrowUpRight, ExternalLink, FolderOpen } from "lucide-react";
+import { BoxSelect, Activity, ArrowUpRight, ExternalLink, FolderOpen, Globe } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSelectedNetwork, networkLabel } from "@/components/layout";
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
@@ -14,6 +15,11 @@ const stagger = {
 
 export default function Projects() {
   const { data: projects, isLoading } = useListProjects();
+  const selectedNetwork = useSelectedNetwork();
+
+  const filtered = selectedNetwork === "all"
+    ? projects
+    : projects?.filter(p => p.network === selectedNetwork);
 
   return (
     <div className="space-y-7 md:space-y-9 max-w-6xl mx-auto">
@@ -40,13 +46,17 @@ export default function Projects() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-52 w-full rounded-xl" />)}
         </div>
-      ) : projects?.length === 0 ? (
+      ) : filtered?.length === 0 ? (
         <motion.div variants={fadeUp} initial="initial" animate="animate">
           <div
             className="rounded-xl border border-dashed border-border/50 flex flex-col items-center justify-center h-64 text-muted-foreground"
           >
             <BoxSelect size={36} className="mb-3 opacity-25" />
-            <p className="text-sm font-medium">No projects registered yet.</p>
+            <p className="text-sm font-medium">
+              {selectedNetwork === "all"
+                ? "No projects registered yet."
+                : `No projects on ${networkLabel(selectedNetwork)} yet.`}
+            </p>
           </div>
         </motion.div>
       ) : (
@@ -56,7 +66,7 @@ export default function Projects() {
           initial="initial"
           animate="animate"
         >
-          {projects?.map(project => (
+          {filtered?.map(project => (
             <motion.div key={project.id} variants={fadeUp}>
               <Link href={`/projects/${project.id}`} className="block h-full group">
                 <div
@@ -95,10 +105,25 @@ export default function Projects() {
                         {project.name.charAt(0)}
                       </span>
                     </div>
-                    <ArrowUpRight
-                      size={16}
-                      className="text-muted-foreground/30 group-hover:text-primary transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                    />
+                    <div className="flex items-center gap-2">
+                      {project.network ? (
+                        <span
+                          className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                          style={{
+                            background: "rgba(212,147,26,0.08)",
+                            border: "1px solid rgba(212,147,26,0.18)",
+                            color: "rgba(212,147,26,0.85)",
+                          }}
+                        >
+                          <Globe size={9} />
+                          {networkLabel(project.network)}
+                        </span>
+                      ) : null}
+                      <ArrowUpRight
+                        size={16}
+                        className="text-muted-foreground/30 group-hover:text-primary transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                      />
+                    </div>
                   </div>
 
                   {/* Name + description */}

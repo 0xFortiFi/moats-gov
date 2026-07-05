@@ -249,6 +249,7 @@ export const ListProjectsResponseItem = zod.object({
   "contractAddress": zod.string(),
   "description": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "network": zod.string().nullish(),
   "totalProposals": zod.number().optional(),
   "activeProposals": zod.number().optional(),
   "createdAt": zod.string()
@@ -280,6 +281,7 @@ export const GetProjectResponse = zod.object({
   "contractAddress": zod.string(),
   "description": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "network": zod.string().nullish(),
   "totalProposals": zod.number().optional(),
   "activeProposals": zod.number().optional(),
   "createdAt": zod.string()

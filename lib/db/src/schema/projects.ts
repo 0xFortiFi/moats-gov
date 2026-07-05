@@ -8,6 +8,7 @@ export const projectsTable = pgTable("projects", {
   contractAddress: text("contract_address").notNull().unique(),
   description: text("description"),
   logoUrl: text("logo_url"),
+  network: text("network"),
   totalProposals: integer("total_proposals").notNull().default(0),
   activeProposals: integer("active_proposals").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),

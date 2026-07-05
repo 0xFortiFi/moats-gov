@@ -1,1 +1,2 @@
 - [Wouter nested links](wouter-nested-links.md) — wouter <Link> renders as <a>; never nest inside another <Link>. Use div+onClick instead.
+- [Moats data sources](moats-data-sources.md) — names/logos only auto-resolve for Avalanche moats; others need manual overrides; 10-min cache needs workflow restart.
